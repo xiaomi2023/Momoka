@@ -38,7 +38,13 @@ Momoka v0.1是一个LLM驱动的电脑操作助理，目前支持编辑文件、
 git clone https://github.com/xiaomi2023/Momoka/
 ```
 
-### 2、在config.json配置LLM的API和工作目录
+### 2、配置环境
+```bash
+pip install openai playwright
+playwright install chromium
+```
+
+### 3、在config.json配置LLM的API和工作目录
 ```json
 {
   "api_key": "sk-XXX",
@@ -49,7 +55,7 @@ git clone https://github.com/xiaomi2023/Momoka/
 }
 ```
 
-### 3、运行Momoka
+### 4、运行Momoka
 ```bash
 python main.py
 ```
