@@ -1,0 +1,10 @@
+{
+  "api_key": "sk-XXX",
+  "work_dir": "",
+  "base_url": "https://api.XXX.com",
+  "model": "",
+  "encoding": "utf-8",
+  "summary": false,
+  "dialogue": false,
+  "fold": true
+}
