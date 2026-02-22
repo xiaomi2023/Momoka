@@ -86,19 +86,41 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
 
 
 def browser_read(max_chars: int = 4000) -> str:
-    """返回当前页面的纯文本内容（截断至 max_chars）。"""
+    """返回当前页面的纯文本内容 + 可交互元素清单（截断至 max_chars）。"""
     if _page is None or _page.is_closed():
         return "浏览器尚未打开任何页面，请先使用 BROWSE_OPEN。"
     try:
-        text = _page.evaluate("""() => {
-            const clone = document.body.cloneNode(true);
-            clone.querySelectorAll('script,style,noscript,svg').forEach(el => el.remove());
-            return clone.innerText;
-        }""")
+        # 第一份：纯文本（去除 script/style/noscript/svg）
+        text = _page.inner_text("body")
         text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
         if len(text) > max_chars:
             text = text[:max_chars] + f"\n…（内容已截断，共 {len(text)} 字符）"
-        return f"当前页面：{_page.url}\n\n{text}"
+
+        # 第二份：可交互元素清单
+        elements = _page.evaluate("""() => {
+            return [...document.querySelectorAll('input, button, a, select, textarea')]
+                .filter(el => el.offsetParent !== null)
+                .slice(0, 50)
+                .map(el => {
+                    const tag = el.tagName.toLowerCase();
+                    const id = el.id ? '#' + el.id : '';
+                    const cls = (el.className && typeof el.className === 'string')
+                        ? '.' + el.className.trim().split(/\\s+/)[0] : '';
+                    const selector = id || cls || tag;
+                    const label = (el.innerText || '').slice(0, 20)
+                        || (el.value || '').slice(0, 20)
+                        || (el.placeholder || '').slice(0, 20);
+                    const type = el.type || '';
+                    return '[' + tag + '] ' + selector + ' | type=' + type + ' | "' + label + '"';
+                })
+                .join('\\n');
+        }""")
+
+        return (
+            f"<当前页面：{_page.url}>\n\n"
+            f"<── 页面文字内容 ──>\n{text}\n\n"
+            f"<── 可交互元素 ──>\n{elements}"
+        )
     except Exception as e:
         log(f"browser_io | READ error: {e}")
         return f"读取页面内容失败：{e}"
@@ -365,12 +387,14 @@ def browser_open_safe(url: str, wait_until: str = "domcontentloaded") -> str:
         log(f"browser_io | browser_open_safe error: {e}")
         return str(e)
 
+
 def browser_read_safe(max_chars: int = 4000) -> str:
     try:
         return browser_read(max_chars)
     except Exception as e:
         log(f"browser_io | browser_read_safe error: {e}")
         return str(e)
+
 
 def browser_click_safe(selector: str) -> str:
     try:

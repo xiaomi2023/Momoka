@@ -5,11 +5,11 @@ import bot
 from system_io import get_cwd
 
 TITLE = r"""
-.___  ___.   ______   .___  ___.   ______   __  ___       ___      
-|   \/   |  /  __  \  |   \/   |  \  /  | | |/  /        /   \     
-|  \  /  | |  |  |  | |  \  /  | |  |  |  | |  '  /     /  ^  \    
-|  |\/|  | |  |  |  | |  |\/|  | |  |  |  | |    <     /  /_\  \   
-|  |  |  | |  `--'  | |  |  |  | |  `--'  | |  .  \   /  _____  \  
+.___  ___.   ______   .___  ___.   ______   ___ ___       ___      
+|   \/   |  /  __  \  |   \/   |  /  __  \  | |/  /      /   \     
+|  \  /  | |  |  |  | |  \  /  | |  |  |  | |    /      /  ^  \    
+|  |\/|  | |  |  |  | |  |\/|  | |  |  |  | |    \     /  /_\  \   
+|  |  |  | |  `--'  | |  |  |  | |  `--'  | |     \   /  _____  \  
 |__|  |__|  \______/  |__|  |__|  \______/  |__|\__\ /__/     \__\ 
 """
 LINE = '-' * 21
@@ -39,11 +39,11 @@ def _build_prompt(request: str) -> str:
         "\n"
         "── 浏览器操作指令（使用 Chromium 浏览器）──\n"
         '打开网页："{BROWSE_OPEN [URL]}"，例如"{BROWSE_OPEN https://www.baidu.com}"；\n'
-        '读取当前页面文字内容："{BROWSE_READ}"，或指定最大字符数"{BROWSE_READ 8000}"；\n'
-        '点击页面元素（CSS选择器）："{BROWSE_CLICK [selector]}"，例如"{BROWSE_CLICK #submit}"；\n'
-        '在输入框中输入文字："{BROWSE_TYPE [selector]|[text]}"，例如"{BROWSE_TYPE #kw|Python教程}"；\n'
-        '操作下拉框："{BROWSE_SELECT [selector]|[选项值/文字/序号]}"，例如"{BROWSE_SELECT #lang|zh-CN}"；\n'
-        '悬停元素（触发 tooltip 或展开菜单）："{BROWSE_HOVER [selector]}"，例如"{BROWSE_HOVER .menu-item}"；\n'
+        '读取当前页面文字内容："{BROWSE_READ}"，或指定最大字符数"{BROWSE_READ 4000}"；\n'
+        #'点击页面元素（CSS选择器）："{BROWSE_CLICK [selector]}"，例如"{BROWSE_CLICK #submit}"；\n'
+        #'在输入框中输入文字："{BROWSE_TYPE [selector]|[text]}"，例如"{BROWSE_TYPE #kw|Python教程}"；\n'
+        #'操作下拉框："{BROWSE_SELECT [selector]|[选项值/文字/序号]}"，例如"{BROWSE_SELECT #lang|zh-CN}"；\n'
+        #'悬停元素（触发 tooltip 或展开菜单）："{BROWSE_HOVER [selector]}"，例如"{BROWSE_HOVER .menu-item}"；\n'
         '浏览器后退："{BROWSE_BACK}"；\n'
         '浏览器前进："{BROWSE_FORWARD}"；\n'
         '在页面中搜索文字并返回匹配元素："{BROWSE_FIND [文字]}"，或限制结果数"{BROWSE_FIND [文字]|[数量]}"；\n'

@@ -226,7 +226,7 @@ def parse(command: str, input_func=input) -> tuple[str, list[str]]:
     返回：(执行结果字符串, 本轮涉及的文件名列表)
     调用方可根据文件名列表决定是否对历史记录执行折叠。
     """
-    log('start to parse: ' + command)
+    log('start to parse: ' + command[:10] + "...")
     cfg = get_config()
 
     # ── 替换模式步骤1：接收旧文本 ────────────────────────────────────────
