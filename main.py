@@ -16,7 +16,7 @@ LINE = '-' * 20
 
 
 def multiline_input(prompt: str) -> str:
-    """支持多行输入：行末输入 '\\' 后回车可继续下一行，否则结束输入。"""
+    """支持多行输入：行末输入 '\' 后回车可继续下一行，否则结束输入。"""
     lines = []
     first = True
     while True:
