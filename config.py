@@ -44,34 +44,9 @@ def _update_working_config(**kwargs):
     _save_working_config(working)
 
 
-def set_edit_mode(mode: bool):
-    _update_working_config(edit_mode=mode)
-
-
-def set_file_name(name: str):
-    _update_working_config(file_name=name)
-
-
 def set_where(path: str):
     """更新当前工作目录到运行时配置。"""
     _update_working_config(where=path)
-
-
-def set_replace_mode(mode: bool):
-    _update_working_config(replace_mode=mode)
-
-
-def set_replace_file(name: str):
-    _update_working_config(replace_file=name)
-
-
-def set_replace_step(step: int):
-    """替换模式步骤：1 = 等待旧文本，2 = 等待新文本。"""
-    _update_working_config(replace_step=step)
-
-
-def set_replace_old_text(text: str):
-    _update_working_config(replace_old_text=text)
 
 
 # ── 模块加载时初始化运行时状态 ────────────────────────────────────────────────
@@ -79,10 +54,4 @@ def set_replace_old_text(text: str):
 _static = json.load(open(CONFIG_FILE, encoding='utf-8'))
 _update_working_config(
     where=_static['work_dir'],
-    edit_mode=False,
-    file_name='Unknown',
-    replace_mode=False,
-    replace_file='Unknown',
-    replace_step=1,
-    replace_old_text='',
 )

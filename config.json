@@ -1,10 +1,12 @@
 {
   "api_key": "sk-XXX",
+  "work_dir": "C:\\Users\\...",
   "base_url": "https://api.XXX.com",
-  "model": "",
-  "work_dir": "",
+  "model": "XXX",
   "encoding": "utf-8",
   "summary": false,
   "dialogue": false,
-  "fold": true
+  "fold": true,
+  "mute_log": [],
+  "user_call": null
 }

@@ -49,6 +49,7 @@ def system_command(command: str) -> str:
             command,
             shell=True,
             capture_output=True,
+            stdin=subprocess.DEVNULL,   # ← 关键：断开标准输入
             text=True,
             encoding=get_config()['encoding'],
             errors='replace',
@@ -56,7 +57,11 @@ def system_command(command: str) -> str:
             env=_env,
             timeout=COMMAND_TIMEOUT,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as e:
+        # Windows 上 shell=True 时需要手动杀进程树
+        if e.process:
+            subprocess.run(f'taskkill /F /T /PID {e.process.pid}',
+                           shell=True, capture_output=True)
         msg = f'命令执行超时（超过 {COMMAND_TIMEOUT} 秒）：{command}'
         log(f'system_command timeout: {command}')
         return msg

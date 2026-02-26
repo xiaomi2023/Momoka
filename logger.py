@@ -37,4 +37,7 @@ def new_log():
 
 
 def user_log(message: str, end='\n', role='LOG') -> None:
+    from config import get_config
+    if role in get_config().get('mute_log', []):
+        return
     print(f'[{role}] ' + message, end=end)

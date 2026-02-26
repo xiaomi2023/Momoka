@@ -165,7 +165,7 @@ def browser_screenshot(save_dir: str = ".") -> str:
         filename = os.path.join(save_dir, f"screenshot_{int(time.time())}.png")
         _page.screenshot(path=filename, full_page=True)
         log(f"browser_io | SHOT saved to {filename}")
-        user_log(f"截图已保存：{filename}")
+        user_log(f"截图已保存：{filename}", role='BROWSER')
         return f"截图已保存：{filename}"
     except Exception as e:
         log(f"browser_io | SHOT error: {e}")
@@ -336,7 +336,7 @@ def browser_download(url: str, save_dir: str = ".") -> str:
         save_path = os.path.join(save_dir, suggested)
         download.save_as(save_path)
         log(f"browser_io | DOWNLOAD saved to {save_path}")
-        user_log(f"文件已下载：{save_path}")
+        user_log(f"文件已下载：{save_path}", role='BROWSER')
         return f"文件已下载并保存至：{save_path}"
     except Exception as e:
         log(f"browser_io | DOWNLOAD error: {e}")
@@ -367,7 +367,7 @@ def browser_pdf(save_dir: str = ".") -> str:
         filename = os.path.join(save_dir, f"page_{int(time.time())}.pdf")
         _page.pdf(path=filename, format="A4", print_background=True)
         log(f"browser_io | PDF saved to {filename}")
-        user_log(f"PDF 已保存：{filename}")
+        user_log(f"PDF 已保存：{filename}", role='BROWSER')
         return f"PDF 已保存至：{filename}"
     except Exception as e:
         log(f"browser_io | PDF error: {e}")
