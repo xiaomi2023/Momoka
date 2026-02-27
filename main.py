@@ -38,8 +38,8 @@ def _build_system_prompt(request: str) -> str:
         f"用户的需求：\n{request}\n\n"
         f"当前工作目录：{get_cwd()}\n"
         f"工作目录（基准）：{cfg['work_dir']}\n\n"
-        "规则：\n"
-        f"- 称呼用户为“{get_config()['user_call']}”。\n" if get_config()['user_call'] is not None else ""
+        "规则：\n" +
+        (f"- 称呼用户为“{get_config()['user_call']}”。\n" if get_config()['user_call'] is not None else "") +
         "- 优先在工作目录中进行操作；如需操作工作目录之外的文件，请先通过 ask_user 征得同意。\n"
         "- 每次调用工具时，请在工具调用之前附上一句简短的说明文字，告知用户你正在做什么或为什么这样做。\n"
         "- 浏览器操作后，建议调用 browse_read 确认结果，再决定下一步。\n"
@@ -94,7 +94,7 @@ def work(request: str):
         # ── 情形B：纯文本兜底（无工具调用）──────────────────────────────
         if text_content:
             user_log(text_content, role='BOT REPORT')
-        response = work_bot.message('请继续完成任务，记得使用工具调用。', use_tools=True)
+        response = work_bot.message('请继续完成任务，记得使用工具调用，在有问题时使用ask_user工具向用户提问。', use_tools=True)
 
     # ── 自由对话阶段 ────────────────────────────────────────────────────
     cfg = get_config()

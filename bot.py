@@ -81,7 +81,7 @@ TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "ask_user",
-            "description": "向用户提问，等待用户回复后继续。",
+            "description": "在有问题时向用户提问，等待用户回复后继续。",
             "parameters": {
                 "type": "object",
                 "properties": {
