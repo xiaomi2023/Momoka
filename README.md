@@ -98,6 +98,12 @@ python main.py
 | mute_log  | list[string] |    省略部分控制台日志输出，如"['CMD', 'BROWSER']"    |
 | user_call | string       |            Bot对用户的称呼，默认为null            |
 
+### TODO
+- [ ] 多语言支持
+- [ ] 浏览器交互修复
+- [ ] 浏览器读取修复
+- [ ] 超时等待机制
+
 ### License
 
 This repository is licensed under the [Apache-2.0 License](LICENSE).

@@ -41,37 +41,70 @@ def set_cwd_explicit(path: str) -> str:
 
 
 def system_command(command: str) -> str:
+    import threading
+
     cwd = _get_cwd()
     log(f'system_command | cwd: {cwd} | command: {command}')
 
     try:
-        result = subprocess.run(
+        proc = subprocess.Popen(
             command,
             shell=True,
-            capture_output=True,
-            stdin=subprocess.DEVNULL,   # ← 关键：断开标准输入
-            text=True,
-            encoding=get_config()['encoding'],
-            errors='replace',
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,
             cwd=cwd,
             env=_env,
-            timeout=COMMAND_TIMEOUT,
+            start_new_session=True,  # Linux/Mac 下让子进程有独立进程组，便于整组杀死
         )
-    except subprocess.TimeoutExpired as e:
-        # Windows 上 shell=True 时需要手动杀进程树
-        if e.process:
-            subprocess.run(f'taskkill /F /T /PID {e.process.pid}',
-                           shell=True, capture_output=True)
-        msg = f'命令执行超时（超过 {COMMAND_TIMEOUT} 秒）：{command}'
-        log(f'system_command timeout: {command}')
-        return msg
     except Exception as e:
         log(f'system_command error: {e}')
         return str(e)
 
-    output = result.stdout.rstrip('\r\n')
-    if result.stderr:
-        output += f'\n[STDERR]: {result.stderr.rstrip()}'
+    # 用线程异步读取 stdout/stderr，避免管道缓冲区满导致死锁
+    stdout_chunks: list[bytes] = []
+    stderr_chunks: list[bytes] = []
+
+    def _read(pipe, chunks):
+        try:
+            for chunk in iter(lambda: pipe.read(4096), b''):
+                chunks.append(chunk)
+        except Exception:
+            pass
+
+    t_out = threading.Thread(target=_read, args=(proc.stdout, stdout_chunks), daemon=True)
+    t_err = threading.Thread(target=_read, args=(proc.stderr, stderr_chunks), daemon=True)
+    t_out.start()
+    t_err.start()
+
+    timed_out = False
+    try:
+        proc.wait(timeout=COMMAND_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        subprocess.run(
+            f'taskkill /F /T /PID {proc.pid}',
+            shell=True, capture_output=True,
+        )
+
+    # 等待读取线程结束，最多再等 2 秒
+    t_out.join(timeout=1)
+    t_err.join(timeout=1)
+    proc.stdout.close()
+    proc.stderr.close()
+
+    if timed_out:
+        msg = f'命令执行超时（超过 {COMMAND_TIMEOUT} 秒）：{command}'
+        log(f'system_command timeout: {command}')
+        return msg
+
+    encoding = get_config()['encoding']
+    stdout_str = b''.join(stdout_chunks).decode(encoding, errors='replace').rstrip('\r\n')
+    stderr_str = b''.join(stderr_chunks).decode(encoding, errors='replace').rstrip('\r\n')
+
+    output = stdout_str
+    if stderr_str:
+        output += f'\n[STDERR]: {stderr_str}'
 
     log(f'system_command | output: {output}')
     return output or '（输出为空）'

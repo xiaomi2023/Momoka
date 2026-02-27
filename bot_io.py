@@ -196,7 +196,7 @@ def execute_tool_calls(
         result, file_contents, finish = _execute_tool(name, args, input_func)
         all_file_contents.update(file_contents)
 
-        log(f'execute_tool_calls | {name}({args}) → {result[:80]}...')
+        log(f'execute_tool_calls | {name}({args}) → {result}')
         work_bot.add_tool_result(tc.id, result)
 
         if finish:
