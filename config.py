@@ -1,17 +1,13 @@
 import json
 
-CONFIG_FILE = 'config.json'
-WORKING_CONFIG_FILE = 'working_config.json'
+CONFIG_FILE = 'config_tmp.json'
+WORKING_CONFIG_FILE = 'working_config_tmp.json'
 
 
 # ── 静态配置（config.json）────────────────────────────────────────────────────
 
 def get_config() -> dict:
-    """读取静态配置与运行时配置，合并后返回统一字典。
-
-    静态字段（config.json）：api_key, work_dir, base_url, model, encoding, summary, dialogue
-    运行时字段（working_config.json）：edit_mode, file_name, where
-    """
+    """读取静态配置与运行时配置，合并后返回统一字典。"""
     with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
         config = json.load(f)
     working = _get_working_config()
@@ -49,9 +45,15 @@ def set_where(path: str):
     _update_working_config(where=path)
 
 
+def set_wait(seconds: int):
+    """更新超时时长到运行时配置。"""
+    _update_working_config(wait=seconds)
+
+
 # ── 模块加载时初始化运行时状态 ────────────────────────────────────────────────
 # 将 where 重置为 work_dir，确保每次启动从工作目录开始
 _static = json.load(open(CONFIG_FILE, encoding='utf-8'))
 _update_working_config(
     where=_static['work_dir'],
+    wait=10,
 )

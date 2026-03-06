@@ -13,6 +13,14 @@ TOOLS: list[dict] = [
                 "type": "object",
                 "properties": {
                     "command": {"type": "string", "description": "要执行的终端命令"},
+                    "properties": {
+                        "command": {"type": "string", "description": "要执行的终端命令"},
+                        "inputs": {
+                            "type": ["string", "array"],
+                            "items": {"type": "string"},
+                            "description": "可选。如果命令需要交互式输入（如确认、输入参数），在此提供。若是列表则按顺序输入。"
+                        }
+                    }
                 },
                 "required": ["command"],
             },
@@ -26,8 +34,9 @@ TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {"type": "string", "description": "文件绝对路径（含扩展名）"},
+                    "file_path": {"type": "string", "description": "文件的绝对路径（含扩展名）"},
                     "content": {"type": "string", "description": "写入文件的完整内容"},
+                    "encoding": {"type": "string", "description": "文件编码", "default": get_config()['encoding']},
                 },
                 "required": ["file_path", "content"],
             },
@@ -41,9 +50,10 @@ TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {"type": "string", "description": "文件绝对路径（含扩展名）"},
+                    "file_path": {"type": "string", "description": "文件的绝对路径（含扩展名）"},
                     "old_text": {"type": "string", "description": "文件中要被替换的原始文本，必须与文件内容完全一致"},
                     "new_text": {"type": "string", "description": "替换后的新文本"},
+                    "encoding": {"type": "string", "description": "文件编码", "default": get_config()['encoding']},
                 },
                 "required": ["file_path", "old_text", "new_text"],
             },
@@ -57,7 +67,8 @@ TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {"type": "string", "description": "文件绝对路径（含扩展名）"},
+                    "file_path": {"type": "string", "description": "文件的绝对路径（含扩展名）"},
+                    "encoding": {"type": "string", "description": "文件编码", "default": get_config()['encoding']},
                 },
                 "required": ["file_path"],
             },
@@ -106,6 +117,20 @@ TOOLS: list[dict] = [
         },
     },
 
+    {
+        "type": "function",
+        "function": {
+            "name": "set_wait",
+            "description": "设置操作的最大超时时长（秒）。默认为 10 秒。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "seconds": {"type": "integer", "description": "超时时长（秒）"},
+                },
+                "required": ["seconds"],
+            },
+        },
+    },
     {
         "type": "function",
         "function": {
@@ -207,7 +232,7 @@ TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "browse_pdf",
-            "description": "将当前浏览器页面导出为 PDF 文件（仅 headless 模式支持）。",
+            "description": "将当前浏览器页面导出为 PDF 文件。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -224,13 +249,37 @@ TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "browse_eval",
-            "description": "在当前浏览器页面中执行 JavaScript 表达式，返回执行结果。",
+            "description": "在当前浏览器页面中执行 JavaScript 表达式，返回执行结果。表达式在全局作用域上执行。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "script": {"type": "string", "description": "要执行的 JavaScript 表达式"},
                 },
                 "required": ["script"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "browse_wait_for_navigation",
+            "description": "等待当前页面导航完成（例如点击链接、提交表单或执行了可能跳转的 JavaScript 后）。\n建议在调用可能触发页面跳转的 browse_eval 之后立即调用此工具，以确保新页面完全加载后再进行读取或其他操作。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "timeout": {
+                        "type": "integer",
+                        "description": "最大等待时间（秒）",
+                        "default": get_config()['wait'],
+                    },
+                    "state": {
+                        "type": "string",
+                        "enum": ["load", "domcontentloaded", "networkidle"],
+                        "description": "等待的加载状态，'load' 等待 load 事件，'domcontentloaded' 等待 DOM 解析完成，'networkidle' 等待网络空闲",
+                        "default": "networkidle"
+                    }
+                },
+                "required": []
             },
         },
     },
@@ -330,6 +379,7 @@ class Bot:
         return {
             'content': text_content,
             'tool_calls': tool_calls,
+            'total_tokens': response.usage.total_tokens if response.usage else 0,
         }
 
     def add_tool_result(self, tool_call_id: str, result: str):
@@ -385,7 +435,11 @@ class Bot:
         if tool_calls:
             chat_log(f'[{self.bot_name}] RESUME TOOL_CALLS: {[tc.function.name for tc in tool_calls]}')
 
-        return {'content': text_content, 'tool_calls': tool_calls}
+        return {
+            'content': text_content,
+            'tool_calls': tool_calls,
+            'total_tokens': response.usage.total_tokens if response.usage else 0,
+        }
 
     def set_system(self, system: str):
         """设置或替换 system 提示词。"""
@@ -401,7 +455,7 @@ class Bot:
         通过 _meta 中记录的原始文件内容精确定位并替换，无需正则匹配。
         返回折叠的消息条数。
         """
-        placeholder = f'[文件内容已折叠：{filename}]'
+        placeholder = f'[文件内容已折叠: {filename}]'
         hits = [
             i for i, m in enumerate(self._meta)
             if filename in m.get('file_contents', {})
@@ -418,7 +472,7 @@ class Bot:
                 if new_content != original:
                     self.history[i]['content'] = new_content
                     collapsed_count += 1
-                    log(f'bot.collapse_file_in_history | 折叠历史[{i}]中的文件：{filename}')
+                    log(f'bot.collapse_file_in_history | 折叠历史[{i}]中的文件: {filename}')
             del self._meta[i]['file_contents'][filename]
 
         return collapsed_count

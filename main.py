@@ -1,3 +1,4 @@
+import time
 from logger import log, user_log, new_log
 import bot_io
 from config import get_config
@@ -35,10 +36,11 @@ def _build_system_prompt(request: str) -> str:
     cfg = get_config()
     return (
         f"你是 Momoka，一个工作助理。你需要通过调用工具来操作用户的电脑并完成需求。\n"
-        f"用户的需求：\n{request}\n\n"
-        f"当前工作目录：{get_cwd()}\n"
-        f"工作目录（基准）：{cfg['work_dir']}\n\n"
-        "规则：\n" +
+        f"用户的需求: \n{request}\n\n"
+        f"当前工作目录: {get_cwd()}\n"
+        f"工作目录（基准）: {cfg['work_dir']}\n\n"
+        f"用{'中文' if cfg.get('language', 'cn') == 'cn' else 'English'}与用户沟通\n\n"
+        "规则: \n" +
         (f"- 称呼用户为“{get_config()['user_call']}”。\n" if get_config()['user_call'] is not None else "") +
         "- 优先在工作目录中进行操作；如需操作工作目录之外的文件，请先通过 ask_user 征得同意。\n"
         "- 每次调用工具时，请在工具调用之前附上一句简短的说明文字，告知用户你正在做什么或为什么这样做。\n"
@@ -49,12 +51,21 @@ def _build_system_prompt(request: str) -> str:
     )
 
 
+def _t(cn: str, en: str) -> str:
+    """返回当前语言对应的文本。"""
+    lang = get_config().get('language', 'cn')
+    return cn if lang == 'cn' else en
+
+
 def work(request: str):
     """驱动 Bot 循环执行操作，直到调用 finish；随后可进入自由对话模式。"""
     work_bot = bot.Bot(bot_name='Momoka')
     work_bot.set_system(_build_system_prompt(request))
 
     file_contents: dict[str, str] = {}
+    start_time = time.time()
+    total_tokens = 0
+    round_count = 0
 
     # 首次用 message() 插入 user 消息触发模型开始；后续工具执行完用 resume() 续推理
     response = work_bot.message(
@@ -63,6 +74,8 @@ def work(request: str):
         file_contents=file_contents,
         use_tools=True,
     )
+    total_tokens += response.get('total_tokens', 0)
+    round_count += 1
 
     while True:
         text_content: str = response['content']
@@ -79,22 +92,34 @@ def work(request: str):
                 for filename in file_contents:
                     count = work_bot.collapse_file_in_history(filename)
                     if count:
-                        log(f'折叠：{filename}（折叠了 {count} 条旧记录）')
+                        log(f'折叠: {filename}（折叠了 {count} 条旧记录）')
 
             is_finish, file_contents = bot_io.execute_tool_calls(work_bot, tool_calls)
             if is_finish:
-                user_log('Done')
+                elapsed = time.time() - start_time
+                mins = int(elapsed // 60)
+                secs = int(elapsed % 60)
+                time_str = f'{mins}min {secs}s' if mins else f'{secs}s'
+                done_msg = _t(
+                    f'任务完成 ({time_str} | {total_tokens} tokens | {round_count}R)',
+                    f'Task Done ({time_str} | {total_tokens}tokens | {round_count} rounds)',
+                )
+                user_log(done_msg)
                 log('work DONE')
                 break
 
             # 工具执行完，直接续推理，不插 user 消息
             response = work_bot.resume(use_tools=True)
+            total_tokens += response.get('total_tokens', 0)
+            round_count += 1
             continue
 
         # ── 情形B：纯文本兜底（无工具调用）──────────────────────────────
         if text_content:
             user_log(text_content, role='BOT REPORT')
         response = work_bot.message('请继续完成任务，记得使用工具调用，在有问题时使用ask_user工具向用户提问。', use_tools=True)
+        total_tokens += response.get('total_tokens', 0)
+        round_count += 1
 
     # ── 自由对话阶段 ────────────────────────────────────────────────────
     cfg = get_config()

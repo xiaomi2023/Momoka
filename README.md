@@ -97,16 +97,7 @@ python main.py
 | fold      | bool         | 折叠Bot上下文中重复的文本，对于不支持缓存输入的模型建议开启以节省Token |
 | mute_log  | list[string] |    省略部分控制台日志输出，如"['CMD', 'BROWSER']"    |
 | user_call | string       |            Bot对用户的称呼，默认为null            |
-
-### TODO
-- [ ] 多语言支持
-- [ ] 浏览器交互修复
-- [ ] 浏览器读取修复
-- [ ] 超时等待机制'=
-- [ ] 任务完成时更完善的user_log
-- [ ] 文件IO编码问题修复
-- [ ] 更多错误信息返回
-- [ ] 大型文件交互修正
+| language  | string       | Momoka的Bot使用的语言，设置“cn”以使用中文，“en”以使用英文。  |
 
 ### License
 
@@ -190,18 +181,19 @@ python main.py
 
 ### Configuration
 
-| Parameter  | Type         | Description |
-|------------|--------------|:-----------:|
-| api_key    | string       | API Key for calling the LLM |
-| base_url   | string       | base_url for calling the LLM |
-| model      | string       | Model name for the LLM |
-| work_dir   | string       | Default working directory for Momoka. User approval is required to edit files outside this directory |
-| encoding   | string       | Encoding used by Momoka when processing files |
-| summary    | bool         | Generate a work summary after Momoka completes a task |
-| dialogue   | bool         | Enable conversation with the bot after Momoka completes a task |
-| fold       | bool         | Collapse repeated text in the bot's context. Recommended for models that do not support cached inputs, to save tokens |
-| mute_log   | list[string] | Suppress certain console log outputs, e.g. `["CMD", "BROWSER"]` |
-| user_call  | string       | How the bot addresses the user. Defaults to null |
+| Parameter | Type         |                                                      Description                                                      |
+|-----------|--------------|:---------------------------------------------------------------------------------------------------------------------:|
+| api_key   | string       |                                              API Key for calling the LLM                                              |
+| base_url  | string       |                                             base_url for calling the LLM                                              |
+| model     | string       |                                                Model name for the LLM                                                 |
+| work_dir  | string       |         Default working directory for Momoka. User approval is required to edit files outside this directory          |
+| encoding  | string       |                                     Encoding used by Momoka when processing files                                     |
+| summary   | bool         |                                 Generate a work summary after Momoka completes a task                                 |
+| dialogue  | bool         |                            Enable conversation with the bot after Momoka completes a task                             |
+| fold      | bool         | Collapse repeated text in the bot's context. Recommended for models that do not support cached inputs, to save tokens |
+| mute_log  | list[string] |                            Suppress certain console log outputs, e.g. `["CMD", "BROWSER"]`                            |
+| user_call | string       |                                   How the bot addresses the user. Defaults to null                                    |
+| language  | string       |                  The language used by Momoka's Bot. Set "cn" to use Chinese, or "en" to use English.                  |
 
 ### License <span id="license-en"></span>
 
