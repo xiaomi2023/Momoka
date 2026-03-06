@@ -8,5 +8,6 @@
   "dialogue": false,
   "fold": true,
   "mute_log": [],
-  "user_call": null
+  "user_call": null,
+  "language": "cn"
 }

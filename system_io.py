@@ -3,9 +3,7 @@ import os
 from config import get_config, set_where
 from logger import log
 
-COMMAND_TIMEOUT = 10  # 终端命令超时秒数
-
-# 持久化的环境状态（进程内跨调用保持）
+# ── 持久化的环境状态（进程内跨调用保持）────────────────────────────────────
 _env = os.environ.copy()
 _cwd: str | None = None  # 延迟初始化，首次调用时从 config 读取
 
@@ -35,16 +33,32 @@ def set_cwd_explicit(path: str) -> str:
     full_path = path if os.path.isabs(path) else os.path.join(_get_cwd(), path)
     if os.path.isdir(full_path):
         _set_cwd(full_path)
-        return f'目录已切换到：{full_path}'
+        return f'目录已切换到: {full_path}'
     else:
-        return f'目录不存在：{full_path}'
+        return f'目录不存在: {full_path}'
 
 
-def system_command(command: str) -> str:
+def system_command(command: str, inputs: str | list[str] | None = None) -> str:
     import threading
+    import subprocess
 
     cwd = _get_cwd()
-    log(f'system_command | cwd: {cwd} | command: {command}')
+    log(f'system_command | cwd: {cwd} | command: {command} | inputs: {inputs}')
+
+    # 预处理输入内容
+    input_data = None
+    if inputs is not None:
+        if isinstance(inputs, list):
+            # 将列表合并为换行分隔的字符串，确保最后有一个换行
+            input_data = "\n".join(map(str, inputs)) + "\n"
+        else:
+            input_data = str(inputs)
+            if not input_data.endswith('\n'):
+                input_data += '\n'
+
+        # 转换为字节流
+        encoding = get_config()['encoding']
+        input_data = input_data.encode(encoding)
 
     try:
         proc = subprocess.Popen(
@@ -52,19 +66,19 @@ def system_command(command: str) -> str:
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.PIPE if input_data else subprocess.DEVNULL,  # 如果有输入则开启管道
             cwd=cwd,
             env=_env,
-            start_new_session=True,  # Linux/Mac 下让子进程有独立进程组，便于整组杀死
+            start_new_session=True,
         )
     except Exception as e:
         log(f'system_command error: {e}')
         return str(e)
 
-    # 用线程异步读取 stdout/stderr，避免管道缓冲区满导致死锁
     stdout_chunks: list[bytes] = []
     stderr_chunks: list[bytes] = []
 
+    # 读取线程逻辑保持不变
     def _read(pipe, chunks):
         try:
             for chunk in iter(lambda: pipe.read(4096), b''):
@@ -78,25 +92,29 @@ def system_command(command: str) -> str:
     t_err.start()
 
     timed_out = False
+    timeout = get_config().get('wait', 10)
+
     try:
-        proc.wait(timeout=COMMAND_TIMEOUT)
+        if input_data:
+            # 发送输入并等待
+            proc.stdin.write(input_data)
+            proc.stdin.close()  # 必须关闭，否则子进程可能一直等待输入
+
+        proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         timed_out = True
-        subprocess.run(
-            f'taskkill /F /T /PID {proc.pid}',
-            shell=True, capture_output=True,
-        )
+        # Windows 下清理进程树
+        subprocess.run(f'taskkill /F /T /PID {proc.pid}', shell=True, capture_output=True)
 
-    # 等待读取线程结束，最多再等 2 秒
     t_out.join(timeout=1)
     t_err.join(timeout=1)
-    proc.stdout.close()
-    proc.stderr.close()
+
+    # 确保关闭所有管道
+    if proc.stdout: proc.stdout.close()
+    if proc.stderr: proc.stderr.close()
 
     if timed_out:
-        msg = f'命令执行超时（超过 {COMMAND_TIMEOUT} 秒）：{command}'
-        log(f'system_command timeout: {command}')
-        return msg
+        return f'命令执行超时（超过 {timeout} 秒）: {command}'
 
     encoding = get_config()['encoding']
     stdout_str = b''.join(stdout_chunks).decode(encoding, errors='replace').rstrip('\r\n')
@@ -106,7 +124,6 @@ def system_command(command: str) -> str:
     if stderr_str:
         output += f'\n[STDERR]: {stderr_str}'
 
-    log(f'system_command | output: {output}')
     return output or '（输出为空）'
 
 def get_cwd() -> str:
