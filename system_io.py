@@ -1,7 +1,10 @@
 import subprocess
 import os
+import sys
 from config import get_config, set_where
 from logger import log
+
+_IS_WINDOWS = sys.platform == 'win32'
 
 # ── 持久化的环境状态（进程内跨调用保持）────────────────────────────────────
 _env = os.environ.copy()
@@ -61,16 +64,21 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
         input_data = input_data.encode(encoding)
 
     try:
-        proc = subprocess.Popen(
-            command,
+        kwargs = dict(
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE if input_data else subprocess.DEVNULL,  # 如果有输入则开启管道
+            stdin=subprocess.PIPE if input_data else subprocess.DEVNULL,
             cwd=cwd,
             env=_env,
-            start_new_session=True,
         )
+        # start_new_session 在 Windows 上不受支持，改用 CREATE_NEW_PROCESS_GROUP
+        if _IS_WINDOWS:
+            kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            kwargs['start_new_session'] = True
+
+        proc = subprocess.Popen(command, **kwargs)
     except Exception as e:
         log(f'system_command error: {e}')
         return str(e)
@@ -103,8 +111,18 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
         proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         timed_out = True
-        # Windows 下清理进程树
-        subprocess.run(f'taskkill /F /T /PID {proc.pid}', shell=True, capture_output=True)
+        # 跨平台终止进程树
+        if _IS_WINDOWS:
+            subprocess.run(
+                f'taskkill /F /T /PID {proc.pid}',
+                shell=True, capture_output=True
+            )
+        else:
+            import signal
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                proc.kill()
 
     t_out.join(timeout=1)
     t_err.join(timeout=1)

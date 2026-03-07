@@ -33,15 +33,23 @@ def multiline_input(prompt: str) -> str:
 
 def _build_system_prompt(request: str) -> str:
     """根据当前配置构建 system 提示词（work 阶段）。"""
+    import sys as _sys
     cfg = get_config()
+    if _sys.platform == 'win32':
+        platform_hint = f'Windows（{_sys.platform}，使用 CMD 命令，如 dir、copy、del、type 等）'
+    elif _sys.platform == 'darwin':
+        platform_hint = f'macOS（{_sys.platform}，使用 Unix shell 命令，如 ls、cp、rm、cat 等）'
+    else:
+        platform_hint = f'Linux（{_sys.platform}，使用 Unix shell 命令，如 ls、cp、rm、cat 等）'
     return (
         f"你是 Momoka，一个工作助理。你需要通过调用工具来操作用户的电脑并完成需求。\n"
         f"用户的需求: \n{request}\n\n"
         f"当前工作目录: {get_cwd()}\n"
-        f"工作目录（基准）: {cfg['work_dir']}\n\n"
+        f"工作目录（基准）: {cfg['work_dir']}\n"
+        f"当前操作系统: {platform_hint}\n\n"
         f"用{'中文' if cfg.get('language', 'cn') == 'cn' else 'English'}与用户沟通\n\n"
         "规则: \n" +
-        (f"- 称呼用户为“{get_config()['user_call']}”。\n" if get_config()['user_call'] is not None else "") +
+        (f"- 称呼用户为\"{get_config()['user_call']}\"。\n" if get_config()['user_call'] is not None else "") +
         "- 优先在工作目录中进行操作；如需操作工作目录之外的文件，请先通过 ask_user 征得同意。\n"
         "- 每次调用工具时，请在工具调用之前附上一句简短的说明文字，告知用户你正在做什么或为什么这样做。\n"
         "- 浏览器操作后，建议调用 browse_read 确认结果，再决定下一步。\n"
@@ -49,7 +57,6 @@ def _build_system_prompt(request: str) -> str:
         "- 进入文件编辑模式后，下一条消息请只输出文件的完整内容，不要使用工具调用。\n"
         "- 进入替换模式后，下一条消息请只输出旧文本，确认后再输出新文本，不要使用工具调用。\n"
     )
-
 
 def _t(cn: str, en: str) -> str:
     """返回当前语言对应的文本。"""

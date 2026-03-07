@@ -8,7 +8,7 @@ TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "system_command",
-            "description": "在用户的 CMD 终端执行命令，例如 dir、mkdir、copy 等。",
+            "description": "在用户的终端执行命令，例如 dir/ls、mkdir 等。",
             "parameters": {
                 "type": "object",
                 "properties": {
