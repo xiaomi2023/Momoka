@@ -12,7 +12,7 @@
 
 ---
 
-<h2 id="chinese">🇨🇳 中文</h2>
+<h2 id="chinese">中文</h2>
 
 <!-- TOC -->
   * [介绍](#介绍)
@@ -105,7 +105,7 @@ This repository is licensed under the [Apache-2.0 License](LICENSE).
 
 ---
 
-<h2 id="english">🇬🇧 English</h2>
+<h2 id="english">English</h2>
 
 <!-- TOC-EN -->
   * [Introduction](#introduction)
