@@ -98,10 +98,6 @@ python main.py
 | language  | string       |               Momoka使用的语言               |
 | prompt    | string       |               Momoka的提示词                |
 
-### TODO
-* 错误捕获和处理
-* 提示词注入
-
 ### License
 
 This repository is licensed under the [Apache-2.0 License](LICENSE).
@@ -196,10 +192,6 @@ python main.py
 | user_call | string       |                                   How the bot addresses the user. Defaults to null                                    |
 | language  | string       |                  The language used by Momoka's Bot. Set "cn" to use Chinese, or "en" to use English.                  |
 | prompt    | string       |                                                Prompt for Momoka                                                      |
-
-### TODO
-* Error catching and handling
-* Prompt injection
 
 ### License <span id="license-en"></span>
 
