@@ -1,2 +1,2 @@
-log.txt
-chat_history_log.txt
+logs/log.txt
+logs/chat_history_log.txt

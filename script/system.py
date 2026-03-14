@@ -1,8 +1,7 @@
-import subprocess
 import os
 import sys
 from config import get_config, set_where
-from logger import log
+from script.logger import log
 
 _IS_WINDOWS = sys.platform == 'win32'
 

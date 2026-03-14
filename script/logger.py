@@ -1,10 +1,18 @@
 import logging
+import os
+
+_BASE = os.path.dirname(os.path.abspath(__file__))   # script/ 目录
+_LOG_DIR = os.path.join(_BASE, '..', 'logs')         # Momoka/logs/
+os.makedirs(_LOG_DIR, exist_ok=True)
+
+_LOG_FILE      = os.path.join(_LOG_DIR, 'log.txt')
+_CHAT_LOG_FILE = os.path.join(_LOG_DIR, 'chat_history_log.txt')
 
 # ── 主日志（系统事件、指令解析等）────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] %(message)s',
-    filename='../log.txt',
+    filename=_LOG_FILE,
     filemode='a',
     encoding='utf-8'
 )
@@ -14,7 +22,7 @@ _chat_logger = logging.getLogger('chat_history')
 _chat_logger.setLevel(logging.INFO)
 _chat_logger.propagate = False  # 不传播到根 logger，避免混入 log.txt
 
-_chat_handler = logging.FileHandler('../chat_history_log.txt', mode='a', encoding='utf-8')
+_chat_handler = logging.FileHandler(_CHAT_LOG_FILE, mode='a', encoding='utf-8')
 _chat_handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s'))
 _chat_logger.addHandler(_chat_handler)
 
@@ -30,9 +38,9 @@ def chat_log(message: str) -> None:
 
 def new_log():
     """清空 log.txt 和 chat_history_log.txt。"""
-    with open('../log.txt', 'w'):
+    with open(_LOG_FILE, 'w'):
         pass
-    with open('../chat_history_log.txt', 'w'):
+    with open(_CHAT_LOG_FILE, 'w'):
         pass
 
 

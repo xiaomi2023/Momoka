@@ -1,5 +1,5 @@
 """
-tools.py —— 工具调用执行层。
+tool.py —— 工具调用执行层。
 
 接收 Bot.message() 返回的 tool_calls 列表，依次执行每个工具，
 将结果通过 Bot.add_tool_result() 写回历史，最终返回是否 FINISH。
@@ -10,9 +10,10 @@ tools.py —— 工具调用执行层。
 
 import json
 import traceback
-from logger import log, user_log
+from script.logger import log, user_log
 from config import get_config
 from script.system import system_command, find_file, edit_file
+import os
 
 
 # ── 单个工具执行 ──────────────────────────────────────────────────────────
@@ -109,7 +110,64 @@ def _execute_tool(name: str, args: dict,
                 log(f'read_file error | {file_path}\n{traceback.format_exc()}')
                 return f'在阅读文件时遇到了以下错误: \n{type(e).__name__}: {e}\n如果没有找到文件，可以尝试使用文件的绝对路径。', {}, False
 
-        # ── change_directory ───────────────────────────────────────────────
+        # ── get_skill ──────────────────────────────────────────────────────
+        case 'get_skill':
+            import os as _os
+            skill_name = args.get('skill_name', '').strip()
+            resource = args.get('resource', '').strip()  # 可选：scripts/xxx.py / references/xxx.md 等
+            skills_dir = cfg.get('skills_dir', 'skill')
+            if _os.path.isabs(skills_dir):
+                skills_root = skills_dir
+            else:
+                _project_root = _os.environ.get('MOMOKA_PROJECT_DIR', '')
+                skills_root = _os.path.join(_project_root, skills_dir)
+            skill_path = _os.path.join(skills_root, skill_name)
+
+            if not _os.path.isdir(skill_path):
+                return (f'未找到skill: {skill_name}（路径: {skill_path}）'
+                        f'\n提示: 请确认 {skills_dir}/ 目录下存在该skill文件夹。'), {}, False
+
+            # 读取指定资源文件，或默认读取 SKILL.md
+            if resource:
+                target = _os.path.join(skill_path, resource)
+                if not _os.path.isfile(target):
+                    # 列出可用资源供模型参考
+                    available = []
+                    for root_, dirs_, files_ in _os.walk(skill_path):
+                        for f_ in files_:
+                            available.append(_os.path.join(root_, f_))
+                    return (f'未找到资源文件: {resource}\n'
+                            f'skill {skill_name!r} 中可用文件:\n' +
+                            '\n'.join(f'  {f}' for f in sorted(available))), {}, False
+                try:
+                    with open(target, 'r', encoding=default_encoding) as fh:
+                        content = fh.read()
+                    user_log(f'读取skill资源: {skill_name}/{resource}')
+                    log(f'get_skill | {skill_name}/{resource} ({len(content)} chars)')
+                    return content, {target: content}, False
+                except Exception as e:
+                    return f'读取资源文件失败: {e}', {}, False
+            else:
+                skill_md = _os.path.join(skill_path, 'SKILL.md')
+                if not _os.path.isfile(skill_md):
+                    return f'skill目录存在但缺少 SKILL.md: {skill_path}', {}, False
+                try:
+                    with open(skill_md, 'r', encoding=default_encoding) as fh:
+                        content = fh.read()
+                    # 顺带列出目录中可用的其他资源（scripts/references/assets）
+                    extras = []
+                    for sub in ('scripts', 'references', 'assets'):
+                        sub_path = _os.path.join(skill_path, sub)
+                        if _os.path.isdir(sub_path):
+                            for fn in sorted(_os.listdir(sub_path)):
+                                extras.append(os.path.realpath(os.path.join(sub_path, fn)))
+                    suffix = ('\n\n可用资源文件（使用 resource 参数加载）:\n' +
+                              '\n'.join(f'  {e}' for e in extras)) if extras else ''
+                    user_log(f'已加载skill: {skill_name}')
+                    log(f'get_skill | {skill_name}/SKILL.md ({len(content)} chars)')
+                    return content + suffix, {skill_md: content}, False
+                except Exception as e:
+                    return f'读取 SKILL.md 失败: {e}', {}, False
         case 'change_directory':
             from script.system import set_cwd_explicit
             path = args.get('path', '')
@@ -136,7 +194,7 @@ def _execute_tool(name: str, args: dict,
             from script.browser import browser_search
             query = args.get('query', '')
             engine = args.get('engine', 'google')
-            user_log(f'搜索 [{engine}]: {query}')
+            user_log(f'搜索({engine}): {query}')
             return browser_search(query, engine), {}, False
 
         case 'browse_read':
@@ -149,21 +207,21 @@ def _execute_tool(name: str, args: dict,
             from script.browser import browser_find
             text = args.get('text', '')
             max_results = args.get('max_results', 10)
-            user_log(f'页面搜索...: {text!r}')
+            user_log(f'页面搜索: {text!r}')
             return browser_find(text, int(max_results)), {}, False
 
         case 'browse_download':
             from script.browser import browser_download
             url = args.get('url', '')
             save_dir = args.get('save_dir') or cfg['work_dir']
-            user_log(f'下载文件...: {url} → {save_dir}')
+            user_log(f'下载文件: {url} → {save_dir}')
             return browser_download(url, save_dir), {}, False
 
         case 'browse_upload':
             from script.browser import browser_upload
             selector = args.get('selector', '')
             file_path = args.get('file_path', '')
-            user_log(f'上传文件...: {file_path} → {selector}')
+            user_log(f'上传文件: {file_path} → {selector}')
             return browser_upload(selector, file_path), {}, False
 
         case 'browse_pdf':
@@ -174,7 +232,7 @@ def _execute_tool(name: str, args: dict,
 
         case 'browse_eval':
             from script.browser import browser_eval
-            script = args.get('', '')
+            script = args.get('script', '')
             user_log(f'执行 JS: {script}')
             return browser_eval(script), {}, False
 
@@ -182,7 +240,7 @@ def _execute_tool(name: str, args: dict,
             from script.browser import browser_wait_for_navigation
             timeout = args.get('timeout')
             state = args.get('state', 'networkidle')
-            user_log(f'网页加载({state})')
+            user_log(f'网页加载({state})...')
             return browser_wait_for_navigation(timeout, state), {}, False
 
         case 'browse_switch':

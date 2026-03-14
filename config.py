@@ -1,7 +1,7 @@
 import json
 
-CONFIG_FILE = 'config.json'
-WORKING_CONFIG_FILE = 'working_config.json'
+CONFIG_FILE = 'config_tmp.json'
+WORKING_CONFIG_FILE = 'working_config_tmp.json'
 
 
 # ── 静态配置（config.json）────────────────────────────────────────────────────

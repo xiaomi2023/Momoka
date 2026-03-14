@@ -5,18 +5,15 @@ TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "system_command",
-            "description": "在用户的终端执行命令，例如 dir/ls、mkdir 等。",
+            "description": "在用户的终端执行命令。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "command": {"type": "string", "description": "要执行的终端命令"},
-                    "properties": {
-                        "command": {"type": "string", "description": "要执行的终端命令"},
-                        "inputs": {
-                            "type": ["string", "array"],
-                            "items": {"type": "string"},
-                            "description": "可选。如果命令需要交互式输入（如确认、输入参数），在此提供。若是列表则按顺序输入。"
-                        }
+                    "inputs": {
+                        "type": ["string", "array"],
+                        "items": {"type": "string"},
+                        "description": "可选。如果命令需要交互式输入（如确认、输入参数），在此提供。若是列表则按顺序输入。"
                     }
                 },
                 "required": ["command"],
@@ -110,6 +107,34 @@ TOOLS: list[dict] = [
                     "seconds": {"type": "integer", "description": "超时时长（秒）"},
                 },
                 "required": ["seconds"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_skill",
+            "description": (
+                "在需要时加载 Agent Skills 标准格式的skill文件（SKILL.md）或skill内的脚本/资源文件。"
+                "skill目录结构: <name>/SKILL.md、scripts/（可执行脚本）、"
+                "references/（参考文档）、assets/（模板及二进制资源）。"
+                "需要执行脚本或读取额外文档时，用 resource='scripts/xxx.py' 等再次调用。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "skill_name": {
+                        "type": "string",
+                        "description": "skill目录名称",
+                    },
+                    "resource": {
+                        "type": "string",
+                        "description": (
+                            "可选。skill目录内的相对路径。"
+                        ),
+                    },
+                },
+                "required": ["skill_name"],
             },
         },
     },

@@ -1,9 +1,43 @@
-from script.logger import log, chat_log
+from config import get_config
+from script.logger import log, chat_log, user_log
 from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    PermissionDeniedError,
+    RateLimitError,
+    APIStatusError,
+)
 import sys
 import threading
 import itertools
 import time
+
+
+def _openai_call(fn, *args, **kwargs):
+    """统一执行 OpenAI SDK 调用，捕获常见错误并通过 user_log 告知用户。
+
+    Returns:
+        API 响应对象，出错时返回 None。
+    """
+    try:
+        return fn(*args, **kwargs)
+    except AuthenticationError as e:
+        user_log(f'认证失败: API Key 无效或已过期。({e})', role='ERROR')
+    except PermissionDeniedError as e:
+        user_log(f'权限不足: 该 API Key 无权访问指定模型或接口。({e})', role='ERROR')
+    except RateLimitError as e:
+        user_log(f'速率限制: 请求过于频繁或额度已耗尽，请稍后重试。({e})', role='ERROR')
+    except APITimeoutError as e:
+        user_log(f'请求超时: 服务端未在规定时间内响应，请检查网络或稍后重试。({e})', role='ERROR')
+    except APIConnectionError as e:
+        user_log(f'连接失败: 无法连接到 API 服务，请检查网络或 base_url 配置。({e})', role='ERROR')
+    except APIStatusError as e:
+        user_log(f'API 错误 {e.status_code}：{e.message}', role='ERROR')
+    except Exception as e:
+        user_log(f'未知错误：{type(e).__name__}: {e}', role='ERROR')
+    return None
 
 
 # ── 终端等待动画 ──────────────────────────────────────────────────────────
@@ -44,7 +78,9 @@ class Bot:
         self.bot_name = bot_name
         cfg = get_config()
         self.openai = OpenAI(api_key=cfg['api_key'], base_url=cfg['base_url'])
-        self.history = [{'role': 'system', 'content': 'You are a helpful assistant'}]
+        self._base_system: str = 'You are a helpful assistant'
+        self._injected_skills: dict[str, str] = {}  # {skill_name: skill_content}
+        self.history = [{'role': 'system', 'content': self._base_system}]
         # 与 history 等长的元数据列表。
         # 每个元素是一个字典，目前只用 'file_contents' 键：
         #   {'file_contents': {filename: content_str, ...}}
@@ -82,7 +118,12 @@ class Bot:
 
         # noinspection PyTypeChecker
         with Spinner():
-            response = self.openai.chat.completions.create(**kwargs)
+            response = _openai_call(self.openai.chat.completions.create, **kwargs)
+
+        if response is None:
+            # 错误已由 _openai_call 通过 user_log(role='ERROR') 告知用户
+            return {'content': '', 'tool_calls': [], 'input_tokens': 0, 'output_tokens': 0}
+
         choice = response.choices[0].message
 
         text_content: str = choice.content or ''
@@ -127,20 +168,13 @@ class Bot:
 
     def add_tool_result(self, tool_call_id: str, result: str,
                         file_contents: dict[str, str] | None = None):
-        """将工具执行结果追加到对话历史，供下一次 message() 使用。
-
-        Args:
-            file_contents: read_file 等工具读到的文件内容，格式 {filename: content}，
-                           用于后续 collapse_file_in_history 精确定位。
-        """
+        """将工具执行结果追加到对话历史，供下一次 message() 使用。"""
         self.history.append({
             'role': 'tool',
             'tool_call_id': tool_call_id,
             'content': result,
         })
-        self._meta.append(
-            {'file_contents': file_contents} if file_contents else {}
-        )
+        self._meta.append({'file_contents': file_contents or {}})
 
     def resume(self, use_tools: bool = True) -> dict:
         """工具执行完毕后，直接用当前历史继续推理，不插入任何 user 消息。
@@ -158,7 +192,11 @@ class Bot:
 
         # noinspection PyTypeChecker
         with Spinner():
-            response = self.openai.chat.completions.create(**kwargs)
+            response = _openai_call(self.openai.chat.completions.create, **kwargs)
+
+        if response is None:
+            return {'content': '', 'tool_calls': [], 'input_tokens': 0, 'output_tokens': 0}
+
         choice = response.choices[0].message
 
         text_content: str = choice.content or ''
@@ -195,11 +233,35 @@ class Bot:
         }
 
     def set_system(self, system: str):
-        """设置或替换 system 提示词。"""
+        """设置或替换 system 提示词（同时重置 base system）。"""
+        self._base_system = system
+        self._apply_system()
+
+    def inject_skill(self, skill_name: str, skill_content: str):
+        """将 skill 内容追加到 system prompt，finish 后可通过 clear_skills 移除。"""
+        self._injected_skills[skill_name] = skill_content
+        self._apply_system()
+        log(f'bot.inject_skill | 注入skill: {skill_name}')
+
+    def clear_skills(self):
+        """移除所有已注入的 skill，将 system 恢复为 base system。"""
+        if not self._injected_skills:
+            return
+        names = list(self._injected_skills.keys())
+        self._injected_skills.clear()
+        self._apply_system()
+        log(f'bot.clear_skills | 已移除skills: {names}')
+
+    def _apply_system(self):
+        """将 base system + 所有已注入 skill 合并写入 history[0]。"""
+        parts = [self._base_system]
+        for name, content in self._injected_skills.items():
+            parts.append(f'\n<skill: {name}>\n{content}\n</skill>')
+        full_system = ''.join(parts)
         if self.history[0]['role'] == 'system':
-            self.history[0]['content'] = system
+            self.history[0]['content'] = full_system
         else:
-            self.history.insert(0, {'role': 'system', 'content': system})
+            self.history.insert(0, {'role': 'system', 'content': full_system})
             self._meta.insert(0, {})
 
     def collapse_file_in_history(self, filename: str) -> int:

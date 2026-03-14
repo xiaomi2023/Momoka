@@ -27,7 +27,7 @@ import os
 import time
 from typing import Optional
 
-from logger import log, user_log
+from script.logger import log, user_log
 
 
 def _timeout_ms() -> int:
@@ -125,7 +125,6 @@ def browser_read(max_chars: int = 4000) -> str:
                 _page = latest
                 _page.bring_to_front()
                 log(f"browser | 检测到新标签页，自动切换: {old_url} → {_page.url}")
-                user_log(f'检测到新标签页，已自动切换: {_page.url}', role='BROWSER')
     except Exception as e:
         log(f"browser | 新标签页检测失败: {e}")
 
