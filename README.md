@@ -1,5 +1,5 @@
 <div align="center">
-<img width="50%" alt="MOMOKA_LOGO" src="https://github.com/user-attachments/assets/b52e6799-790a-40a5-9d9e-065a4202ffb5"/>
+<img width="60%" alt="MOMOKA_LOGO" src="https://github.com/user-attachments/assets/b52e6799-790a-40a5-9d9e-065a4202ffb5"/>
 </div>
 
 <div align="center">
