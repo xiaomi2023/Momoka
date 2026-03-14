@@ -4,10 +4,9 @@
   "base_url": "https://api.XXX.com",
   "model": "XXX",
   "encoding": "utf-8",
-  "summary": false,
-  "dialogue": false,
   "fold": true,
   "mute_log": [],
   "user_call": null,
-  "language": "cn"
+  "language": "Chinese",
+  "prompt": null
 }

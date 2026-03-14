@@ -147,3 +147,17 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
 def get_cwd() -> str:
     """返回当前持久化工作目录。"""
     return _get_cwd()
+
+
+# ── 文件读写 ──────────────────────────────────────────────────────────────
+
+def find_file(filename: str, encoding: str = 'utf-8') -> str:
+    """读取文件内容，失败时直接抛出异常。"""
+    with open(filename, 'r', encoding=encoding) as f:
+        return f.read()
+
+
+def edit_file(filename: str, text: str, encoding: str = 'utf-8'):
+    """将 text 覆盖写入指定文件。"""
+    with open(filename, 'w', encoding=encoding) as f:
+        f.write(text)

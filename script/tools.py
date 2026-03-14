@@ -1,5 +1,5 @@
 """
-bot_io.py —— 工具调用执行层。
+tools.py —— 工具调用执行层。
 
 接收 Bot.message() 返回的 tool_calls 列表，依次执行每个工具，
 将结果通过 Bot.add_tool_result() 写回历史，最终返回是否 FINISH。
@@ -12,21 +12,7 @@ import json
 import traceback
 from logger import log, user_log
 from config import get_config
-from system_io import system_command
-
-
-# ── 文件工具 ──────────────────────────────────────────────────────────────
-
-def find_file(filename: str, encoding: str = 'utf-8') -> str:
-    """读取文件内容，失败时直接抛出异常。"""
-    with open(filename, 'r', encoding=encoding) as f:
-        return f.read()
-
-
-def edit_file(filename: str, text: str, encoding: str = 'utf-8'):
-    """将 text 覆盖写入指定文件。"""
-    with open(filename, 'w', encoding=encoding) as f:
-        f.write(text)
+from script.system import system_command, find_file, edit_file
 
 
 # ── 单个工具执行 ──────────────────────────────────────────────────────────
@@ -94,7 +80,7 @@ def _execute_tool(name: str, args: dict,
                 edit_file(file_path, new_content, encoding)
                 old_lines = len(old_text.splitlines())
                 new_lines = len(new_text.splitlines())
-                user_log(f'Bot 替换文件: {file_path} (-{old_lines}, +{new_lines})')
+                user_log(f'Bot 替换文件: {file_path} (-{old_lines},+{new_lines})')
                 return f'文件替换完成: {file_path}（-{old_lines} 行，+{new_lines} 行）', {}, False
             except Exception as e:
                 log(f'replace_file error | {file_path}\n{traceback.format_exc()}')
@@ -104,7 +90,7 @@ def _execute_tool(name: str, args: dict,
         case 'read_file':
             file_path = args.get('file_path', '')
             encoding = args.get('encoding') or default_encoding
-            user_log(f'Bot 开始阅读文件: {file_path}')
+            user_log(f'Bot 阅读文件: {file_path}')
             try:
                 import os as _os
                 file_size = _os.path.getsize(file_path)
@@ -125,7 +111,7 @@ def _execute_tool(name: str, args: dict,
 
         # ── change_directory ───────────────────────────────────────────────
         case 'change_directory':
-            from system_io import set_cwd_explicit
+            from script.system import set_cwd_explicit
             path = args.get('path', '')
             result = set_cwd_explicit(path)
             user_log(f'切换目录: {path}')
@@ -134,73 +120,81 @@ def _execute_tool(name: str, args: dict,
         # ── ask_user ───────────────────────────────────────────────────────
         case 'ask_user':
             question = args.get('question', '')
-            reply = input_func(f'Bot 向你提问: {question}\n请回复: ')
+            user_log(f'{question}', role='QUESTION')
+            reply = input_func(f'>> ')
             return (f'用户回复: {reply}' if reply else '用户什么都没回复。'), {}, False
-
-        # ── output ─────────────────────────────────────────────────────────
-        case 'output':
-            message = args.get('message', '')
-            user_log(message, role='BOT')
-            return '发送成功', {}, False
 
         # ── 浏览器指令 ─────────────────────────────────────────────────────
 
         case 'browse_open':
-            from browser_io import browser_open_safe
+            from script.browser import browser_open
             url = args.get('url', '')
-            user_log(f'浏览器打开: {url}')
-            return browser_open_safe(url), {}, False
+            user_log(f'打开网页: {url}')
+            return browser_open(url), {}, False
+
+        case 'browse_search':
+            from script.browser import browser_search
+            query = args.get('query', '')
+            engine = args.get('engine', 'google')
+            user_log(f'搜索 [{engine}]: {query}')
+            return browser_search(query, engine), {}, False
 
         case 'browse_read':
-            from browser_io import browser_read_safe
+            from script.browser import browser_read
             max_chars = args.get('max_chars', 4000)
-            user_log('浏览器读取页面内容')
-            return browser_read_safe(int(max_chars)), {}, False
+            user_log('读取网页内容...')
+            return browser_read(int(max_chars)), {}, False
 
         case 'browse_find':
-            from browser_io import browser_find_safe
+            from script.browser import browser_find
             text = args.get('text', '')
             max_results = args.get('max_results', 10)
-            user_log(f'浏览器页面搜索: {text!r}')
-            return browser_find_safe(text, int(max_results)), {}, False
+            user_log(f'页面搜索...: {text!r}')
+            return browser_find(text, int(max_results)), {}, False
 
         case 'browse_download':
-            from browser_io import browser_download_safe
+            from script.browser import browser_download
             url = args.get('url', '')
             save_dir = args.get('save_dir') or cfg['work_dir']
-            user_log(f'浏览器下载: {url} → {save_dir}')
-            return browser_download_safe(url, save_dir), {}, False
+            user_log(f'下载文件...: {url} → {save_dir}')
+            return browser_download(url, save_dir), {}, False
 
         case 'browse_upload':
-            from browser_io import browser_upload_safe
+            from script.browser import browser_upload
             selector = args.get('selector', '')
             file_path = args.get('file_path', '')
-            user_log(f'浏览器上传文件: {file_path} → {selector}')
-            return browser_upload_safe(selector, file_path), {}, False
+            user_log(f'上传文件...: {file_path} → {selector}')
+            return browser_upload(selector, file_path), {}, False
 
         case 'browse_pdf':
-            from browser_io import browser_pdf_safe
+            from script.browser import browser_pdf
             save_dir = args.get('save_dir') or cfg['work_dir']
-            user_log(f'浏览器导出 PDF，保存至: {save_dir}')
-            return browser_pdf_safe(save_dir), {}, False
+            user_log(f'已将网页导出为 PDF，保存至: {save_dir}')
+            return browser_pdf(save_dir), {}, False
 
         case 'browse_eval':
-            from browser_io import browser_eval_safe
-            script = args.get('script', '')
-            user_log(f'浏览器执行 JS: {script}')
-            return browser_eval_safe(script), {}, False
+            from script.browser import browser_eval
+            script = args.get('', '')
+            user_log(f'执行 JS: {script}')
+            return browser_eval(script), {}, False
 
         case 'browse_wait_for_navigation':
-            from browser_io import browser_wait_for_navigation_safe
+            from script.browser import browser_wait_for_navigation
             timeout = args.get('timeout')
             state = args.get('state', 'networkidle')
-            user_log(f'等待页面导航: {state}')
-            return browser_wait_for_navigation_safe(timeout, state), {}, False
+            user_log(f'网页加载({state})')
+            return browser_wait_for_navigation(timeout, state), {}, False
+
+        case 'browse_switch':
+            from script.browser import browser_switch
+            index = int(args.get('index', 0))
+            user_log(f'切换标签页: [{index}]')
+            return browser_switch(index), {}, False
 
         case 'browse_close':
-            from browser_io import browser_close_safe
+            from script.browser import browser_close
             user_log('关闭浏览器')
-            return browser_close_safe(), {}, False
+            return browser_close(), {}, False
 
         case _:
             return f'未知工具: {name}', {}, False
@@ -237,7 +231,8 @@ def execute_tool_calls(
         all_file_contents.update(file_contents)
 
         log(f'execute_tool_calls | {name}({args}) → {result}')
-        work_bot.add_tool_result(tc.id, result)
+        work_bot.add_tool_result(tc.id, result,
+                                 file_contents=file_contents if file_contents else None)
 
         if finish:
             is_finish = True

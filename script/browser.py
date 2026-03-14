@@ -1,5 +1,5 @@
 """
-browser_io.py —— 基于 Playwright 的浏览器操作模块。
+browser.py —— 基于 Playwright 的浏览器操作模块。
 
 支持的操作：
     BROWSE_OPEN     打开网页
@@ -42,6 +42,7 @@ def _timeout_ms() -> int:
 # ── 延迟导入 Playwright，避免未安装时整体崩溃 ─────────────────────────
 try:
     from playwright.sync_api import sync_playwright, Page, Browser, Playwright
+
     _PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     _PLAYWRIGHT_AVAILABLE = False
@@ -67,7 +68,7 @@ def _ensure_browser(headless: bool = True) -> "Page":
                 _pw = sync_playwright().start()
             _browser = _pw.chromium.launch(headless=headless)
         _page = _browser.new_page()
-        log("browser_io | 新建浏览器页面")
+        log("browser | 新建浏览器页面")
 
     return _page
 
@@ -77,20 +78,57 @@ def _ensure_browser(headless: bool = True) -> "Page":
 def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
     """导航到指定 URL，返回页面标题。"""
     page = _ensure_browser()
-    log(f"browser_io | OPEN {url}")
+    log(f"browser | OPEN {url}")
     try:
         page.goto(url, wait_until=wait_until, timeout=_timeout_ms())
         title = page.title()
         return f"已打开页面: {url}\n标题: {title}"
     except Exception as e:
-        log(f"browser_io | OPEN error: {e}")
+        log(f"browser | OPEN error: {e}")
         return f"打开页面失败: {e}"
 
 
+def _get_tabs_info() -> str:
+    """返回当前所有标签页的编号、URL、标题列表字符串。"""
+    try:
+        pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
+        if not pages:
+            return ""
+        lines = []
+        for i, p in enumerate(pages):
+            marker = " ◀ 当前" if p == _page else ""
+            try:
+                title = p.title() or "(无标题)"
+            except Exception:
+                title = "(无法获取)"
+            lines.append(f"  [{i}] {title}  {p.url}{marker}")
+        return "<标签页列表>\n" + "\n".join(lines) + "\n</标签页列表>"
+    except Exception:
+        return ""
+
+
 def browser_read(max_chars: int = 4000) -> str:
-    """返回当前页面的内容，可交互元素以 [INTERACTIVE] 标记内联嵌入文字流中。"""
+    """返回当前页面的内容，可交互元素以 [INTERACTIVE] 标记内联嵌入文字流中。
+    若检测到有新标签页打开，自动切换到最新标签页再读取。
+    """
+    global _page
     if _page is None or _page.is_closed():
         return "浏览器尚未打开任何页面，请先使用 BROWSE_OPEN。"
+
+    # ── 检测新标签页 ──────────────────────────────────────────────────
+    try:
+        pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
+        if len(pages) > 1:
+            latest = pages[-1]
+            if latest != _page and not latest.is_closed():
+                old_url = _page.url
+                _page = latest
+                _page.bring_to_front()
+                log(f"browser | 检测到新标签页，自动切换: {old_url} → {_page.url}")
+                user_log(f'检测到新标签页，已自动切换: {_page.url}', role='BROWSER')
+    except Exception as e:
+        log(f"browser | 新标签页检测失败: {e}")
+
     try:
         # 通过 JS 遍历 DOM，将文字节点和可交互元素按文档顺序合并输出
         raw = _page.evaluate("""() => {
@@ -119,7 +157,7 @@ def browser_read(max_chars: int = 4000) -> str:
                 if (node.nodeType !== Node.ELEMENT_NODE) return;
                 const tag = node.tagName;
                 if (['SCRIPT','STYLE','NOSCRIPT','SVG'].includes(tag)) return;
-            
+
                 if (interactive.has(tag) && isVisible(node)) {
                     let label = (node.innerText || '').trim().slice(0, 30)
                              || (node.value || '').slice(0, 30)
@@ -127,14 +165,20 @@ def browser_read(max_chars: int = 4000) -> str:
                              || '';
                     // 如果标签是 A 且 label 为空，则跳过（不生成交互条目）
                     if (tag === 'A' && !label) return;
-            
+
                     const sel = getSelector(node);
                     const type = node.type || '';
                     const typeStr = type ? ' type=' + type : '';
-                    lines.push('[INTERACTIVE|' + tag.toLowerCase() + '|' + sel + typeStr + '|"' + label + '"]');
+                    const marker = '[INTERACTIVE|' + tag.toLowerCase() + '|' + sel + typeStr + '|"' + label + '"]';
+                    // 内联追加到上一行，若无上一行则新起一行
+                    if (lines.length > 0) {
+                        lines[lines.length - 1] += ' ' + marker;
+                    } else {
+                        lines.push(marker);
+                    }
                     return;  // 不递归进交互元素内部
                 }
-            
+
                 for (const child of node.childNodes) visit(child);
             }
 
@@ -148,13 +192,15 @@ def browser_read(max_chars: int = 4000) -> str:
             text = text[:max_chars] + (f"\n…（内容已截断，共 {len(text)} 字符。"
                                        f"如需阅读更多内容，可以在调用时添加max_chars参数指定最大读取字数）")
 
+        tabs_info = _get_tabs_info()
         return (
-            f"<当前页面: {_page.url}>\n"
-            f"<说明: [INTERACTIVE|标签|选择器|文字] 为可交互元素，可用选择器对其进行操作>\n\n"
-            f"{text}"
+                f"<当前页面: {_page.url}>\n"
+                f"<说明: [INTERACTIVE|标签|选择器|文字] 为可交互元素，可用选择器对其进行操作>\n"
+                + (f"{tabs_info}\n" if tabs_info else "")
+                + f"\n{text}"
         )
     except Exception as e:
-        log(f"browser_io | READ error: {e}")
+        log(f"browser | READ error: {e}")
         return f"读取页面内容失败: {e}"
 
 
@@ -165,7 +211,7 @@ def browser_eval(script: str) -> str:
     try:
         result = _page.evaluate(script)
         _page.wait_for_load_state("networkidle", timeout=_timeout_ms())
-        log(f"browser_io | EVAL result: {result}")
+        log(f"browser | EVAL result: {result}")
         base_msg = f"JavaScript 执行结果: {result}"
         # 检测常见的异步关键词
         async_keywords = ['setTimeout', 'setInterval', 'Promise', 'async', 'await']
@@ -174,10 +220,10 @@ def browser_eval(script: str) -> str:
                          "若需触发导航，建议调用 browse_wait_for_navigation 等待，或使用同步方式编写脚本。>")
         return base_msg
     except Exception as e:
-        log(f"browser_io | EVAL error: {e}")
+        log(f"browser | EVAL error: {e}")
         err_msg = f"JavaScript 执行失败: {e}"
         if "return" in script:
-            err_msg += "\n<警告: 检测到 JavaScript 表达式中可能包含了return语句。表达式在全局作用域下执行，请不要非法使用return。>"
+            err_msg += "\n<警告: 检测到 JavaScript 表达式中可能包含了 return 语句。表达式在全局作用域下执行，请不要非法使用 return 。>"
         return err_msg
 
 
@@ -216,10 +262,10 @@ def browser_find(text: str, max_results: int = 10) -> str:
         lines = [f"在页面中找到 {len(results)} 处包含 {text!r} 的元素: "]
         for i, r in enumerate(results, 1):
             lines.append(f"  [{i}] <{r['tag']}> 选择器: {r['selector']}\n      文字: {r['snippet']}")
-        log(f"browser_io | FIND {text!r} → {len(results)} results")
+        log(f"browser | FIND {text!r} → {len(results)} results")
         return "\n".join(lines)
     except Exception as e:
-        log(f"browser_io | FIND error: {e}")
+        log(f"browser | FIND error: {e}")
         return f"页面搜索失败: {e}"
 
 
@@ -238,11 +284,11 @@ def browser_download(url: str, save_dir: str = ".") -> str:
         suggested = download.suggested_filename or f"download_{int(time.time())}"
         save_path = os.path.join(save_dir, suggested)
         download.save_as(save_path)
-        log(f"browser_io | DOWNLOAD saved to {save_path}")
+        log(f"browser | DOWNLOAD saved to {save_path}")
         user_log(f"文件已下载: {save_path}", role='BROWSER')
         return f"文件已下载并保存至: {save_path}"
     except Exception as e:
-        log(f"browser_io | DOWNLOAD error: {e}")
+        log(f"browser | DOWNLOAD error: {e}")
         return f"下载失败: {e}"
 
 
@@ -254,10 +300,10 @@ def browser_upload(selector: str, file_path: str) -> str:
         return f"上传失败: 本地文件不存在: {file_path}"
     try:
         _page.set_input_files(selector, file_path, timeout=_timeout_ms())
-        log(f"browser_io | UPLOAD {file_path} → {selector}")
+        log(f"browser | UPLOAD {file_path} → {selector}")
         return f"已将文件 {file_path} 上传至输入框 {selector}。"
     except Exception as e:
-        log(f"browser_io | UPLOAD error: {e}")
+        log(f"browser | UPLOAD error: {e}")
         return f"上传失败（{selector}）: {e}"
 
 
@@ -269,11 +315,11 @@ def browser_pdf(save_dir: str = ".") -> str:
         os.makedirs(save_dir, exist_ok=True)
         filename = os.path.join(save_dir, f"page_{int(time.time())}.pdf")
         _page.pdf(path=filename, format="A4", print_background=True)
-        log(f"browser_io | PDF saved to {filename}")
+        log(f"browser | PDF saved to {filename}")
         user_log(f"PDF 已保存: {filename}", role='BROWSER')
         return f"PDF 已保存至: {filename}"
     except Exception as e:
-        log(f"browser_io | PDF error: {e}")
+        log(f"browser | PDF error: {e}")
         return f"PDF 生成失败: {e}"
 
 
@@ -284,11 +330,50 @@ def browser_wait_for_navigation(timeout: int = None, state: str = "networkidle")
     try:
         timeout_ms = (timeout if timeout is not None else (_timeout_ms() // 1000)) * 1000
         _page.wait_for_load_state(state, timeout=timeout_ms)
-        log(f"browser_io | WAIT completed: state={state}")
+        log(f"browser | WAIT completed: state={state}")
         return f"页面加载完成（状态：{state}）"
     except Exception as e:
-        log(f"browser_io | WAIT error: {e}")
+        log(f"browser | WAIT error: {e}")
         return f"等待页面加载失败：{e}"
+
+
+SEARCH_ENGINES = {
+    'google': 'https://www.google.com/search?q=',
+    'bing': 'https://www.bing.com/search?q=',
+    'baidu': 'https://www.baidu.com/s?wd=',
+    'duckduckgo': 'https://duckduckgo.com/?q=',
+}
+
+
+def browser_search(query: str, engine: str = 'google') -> str:
+    """使用指定搜索引擎搜索关键词，直接跳转到搜索结果页。"""
+    from urllib.parse import quote_plus
+    engine = engine.lower()
+    base_url = SEARCH_ENGINES.get(engine)
+    if base_url is None:
+        supported = ', '.join(SEARCH_ENGINES.keys())
+        return f"不支持的搜索引擎: {engine!r}。支持的引擎: {supported}"
+    url = base_url + quote_plus(query)
+    log(f"browser | SEARCH [{engine}] {query!r} → {url}")
+    return browser_open(url)
+
+
+def browser_switch(index: int) -> str:
+    """切换到指定编号的标签页。"""
+    global _page
+    try:
+        pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
+        if not pages:
+            return "当前没有打开的标签页。"
+        if index < 0 or index >= len(pages):
+            return f"编号 {index} 超出范围，当前共有 {len(pages)} 个标签页（0 ~ {len(pages) - 1}）。"
+        _page = pages[index]
+        _page.bring_to_front()
+        log(f"browser | SWITCH → [{index}] {_page.url}")
+        return f"已切换到标签页 [{index}]: {_page.title()}  {_page.url}"
+    except Exception as e:
+        log(f"browser | SWITCH error: {e}")
+        return f"切换标签页失败: {e}"
 
 
 def browser_close() -> str:
@@ -302,79 +387,8 @@ def browser_close() -> str:
         if _pw:
             _pw.stop()
         _page = _browser = _pw = None
-        log("browser_io | 浏览器已关闭")
+        log("browser | 浏览器已关闭")
         return "浏览器已关闭。"
     except Exception as e:
-        log(f"browser_io | CLOSE error: {e}")
+        log(f"browser | CLOSE error: {e}")
         return f"关闭浏览器时出错：{e}"
-
-
-# ── 安全接口（bot_io 中应调用这些）──────────────────────────────────────
-#
-# Playwright sync_api 强制要求所有 Page 操作在创建它的同一线程中执行。
-# 使用 ThreadPoolExecutor 会导致 "cannot switch to a different thread" 错误。
-# 因此这里直接调用，不做线程包装，超时由各函数内部的 Playwright timeout 参数控制。
-def browser_wait_for_navigation_safe(timeout=None, state="networkidle") -> str:
-    """安全包装，供 bot_io 调用。"""
-    try:
-        return browser_wait_for_navigation(timeout, state)
-    except Exception as e:
-        log(f"browser_io | browser_wait_for_navigation_safe error: {e}")
-        return str(e)
-
-
-def browser_open_safe(url: str, wait_until: str = "domcontentloaded") -> str:
-    try:
-        return browser_open(url, wait_until)
-    except Exception as e:
-        log(f"browser_io | browser_open_safe error: {e}")
-        return str(e)
-
-def browser_read_safe(max_chars: int = 4000) -> str:
-    try:
-        return browser_read(max_chars)
-    except Exception as e:
-        log(f"browser_io | browser_read_safe error: {e}")
-        return str(e)
-
-def browser_eval_safe(script: str) -> str:
-    try:
-        return browser_eval(script)
-    except Exception as e:
-        log(f"browser_io | browser_eval_safe error: {e}")
-        return str(e)
-
-def browser_close_safe() -> str:
-    try:
-        return browser_close()
-    except Exception as e:
-        log(f"browser_io | browser_close_safe error: {e}")
-        return str(e)
-
-def browser_find_safe(text: str, max_results: int = 10) -> str:
-    try:
-        return browser_find(text, max_results)
-    except Exception as e:
-        log(f"browser_io | browser_find_safe error: {e}")
-        return str(e)
-
-def browser_download_safe(url: str, save_dir: str = ".") -> str:
-    try:
-        return browser_download(url, save_dir)
-    except Exception as e:
-        log(f"browser_io | browser_download_safe error: {e}")
-        return str(e)
-
-def browser_upload_safe(selector: str, file_path: str) -> str:
-    try:
-        return browser_upload(selector, file_path)
-    except Exception as e:
-        log(f"browser_io | browser_upload_safe error: {e}")
-        return str(e)
-
-def browser_pdf_safe(save_dir: str = ".") -> str:
-    try:
-        return browser_pdf(save_dir)
-    except Exception as e:
-        log(f"browser_io | browser_pdf_safe error: {e}")
-        return str(e)

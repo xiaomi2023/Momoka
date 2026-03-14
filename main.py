@@ -1,9 +1,10 @@
 import time
-from logger import log, user_log, new_log
-import bot_io
+
+import config
+from script.logger import log, user_log, new_log
 from config import get_config
-import bot
-from system_io import get_cwd
+from script import bot
+from script.system import get_cwd
 
 TITLE = r"""
 .___  ___.   ______   .___  ___.   ______   ___ ___       ___      
@@ -17,7 +18,6 @@ LINE = '-' * 20
 
 
 def multiline_input(prompt: str) -> str:
-    """支持多行输入：行末输入 '\' 后回车可继续下一行，否则结束输入。"""
     lines = []
     first = True
     while True:
@@ -31,132 +31,114 @@ def multiline_input(prompt: str) -> str:
     return '\n'.join(lines)
 
 
-def _build_system_prompt(request: str) -> str:
-    """根据当前配置构建 system 提示词（work 阶段）。"""
+def _build_system_prompt() -> str:
     import sys as _sys
     cfg = get_config()
     if _sys.platform == 'win32':
-        platform_hint = f'Windows（{_sys.platform}，使用 CMD 命令，如 dir、copy、del、type 等）'
+        platform_hint = f'Windows（{_sys.platform}）'
     elif _sys.platform == 'darwin':
-        platform_hint = f'macOS（{_sys.platform}，使用 Unix shell 命令，如 ls、cp、rm、cat 等）'
+        platform_hint = f'macOS（{_sys.platform}）'
     else:
-        platform_hint = f'Linux（{_sys.platform}，使用 Unix shell 命令，如 ls、cp、rm、cat 等）'
+        platform_hint = f'Linux（{_sys.platform}）'
     return (
         f"你是 Momoka，一个工作助理。你需要通过调用工具来操作用户的电脑并完成需求。\n"
-        f"用户的需求: \n{request}\n\n"
-        f"当前工作目录: {get_cwd()}\n"
+        f"当前目录: {get_cwd()}\n"
         f"工作目录（基准）: {cfg['work_dir']}\n"
-        f"当前操作系统: {platform_hint}\n\n"
-        f"用{'中文' if cfg.get('language', 'cn') == 'cn' else 'English'}与用户沟通\n\n"
+        f"操作系统: {platform_hint}\n"
+        f"用{config.get_config()['language']}与用户沟通\n"
         "规则: \n" +
         (f"- 称呼用户为\"{get_config()['user_call']}\"。\n" if get_config()['user_call'] is not None else "") +
         "- 优先在工作目录中进行操作；如需操作工作目录之外的文件，请先通过 ask_user 征得同意。\n"
-        "- 每次调用工具时，请在工具调用之前附上一句简短的说明文字，告知用户你正在做什么或为什么这样做。\n"
-        "- 浏览器操作后，建议调用 browse_read 确认结果，再决定下一步。\n"
+        "- 工作时告知你正在做或做了什么以及为什么这样做。\n"
         "- 完成所有工作后，调用 finish 交付成果。\n"
-        "- 进入文件编辑模式后，下一条消息请只输出文件的完整内容，不要使用工具调用。\n"
-        "- 进入替换模式后，下一条消息请只输出旧文本，确认后再输出新文本，不要使用工具调用。\n"
+        f"{("\n" + get_config()['prompt'])
+        if (get_config()['prompt'] is not None) and (get_config()['prompt'] != "") else ""}"
     )
 
-def _t(cn: str, en: str) -> str:
-    """返回当前语言对应的文本。"""
-    lang = get_config().get('language', 'cn')
-    return cn if lang == 'cn' else en
 
-
-def work(request: str):
-    """驱动 Bot 循环执行操作，直到调用 finish；随后可进入自由对话模式。"""
-    work_bot = bot.Bot(bot_name='Momoka')
-    work_bot.set_system(_build_system_prompt(request))
-
-    file_contents: dict[str, str] = {}
-    start_time = time.time()
-    total_tokens = 0
-    round_count = 0
-
-    # 首次用 message() 插入 user 消息触发模型开始；后续工具执行完用 resume() 续推理
-    response = work_bot.message(
-        '请开始操作。',
-        role='user',
-        file_contents=file_contents,
-        use_tools=True,
-    )
-    total_tokens += response.get('total_tokens', 0)
-    round_count += 1
-
+def _agent_loop(work_bot, response, file_contents: dict,
+                input_tokens: int, output_tokens: int, round_count: int) -> tuple[bool, dict, int, int, int]:
+    """执行工具调用循环，直到 finish 或 Bot 返回纯文本（等待用户输入）。"""
     while True:
         text_content: str = response['content']
         tool_calls: list = response['tool_calls']
 
-        # ── 情形A：有工具调用 ────────────────────────────────────────────
+        # ── 情形A：有工具调用 ──────────────────────────────────────────
         if tool_calls:
             if text_content:
-                user_log(text_content, role='BOT REPORT')
+                user_log(text_content, role='BOT')
 
-            # 折叠上一轮读取的文件
+            # 记录本轮工具调用前已有的文件名，供稍后折叠使用
+            prev_file_contents = dict(file_contents)
+
+            is_finish, file_contents = tool.execute_tool_calls(work_bot, tool_calls)
+            if is_finish:
+                log('work DONE')
+                return True, file_contents, input_tokens, output_tokens, round_count
+
+            response = work_bot.resume(use_tools=True)
+            input_tokens += response.get('input_tokens', 0)
+            output_tokens += response.get('output_tokens', 0)
+            round_count += 1
+
+            # resume() 已将新 assistant 消息写入历史，此时折叠才能看到 >= 2 条记录
+            # 折叠范围：本轮读到的文件（file_contents）+ 上轮已有的文件（prev_file_contents）
             cfg = get_config()
             if cfg.get('fold', True):
-                for filename in file_contents:
+                to_fold = {**prev_file_contents, **file_contents}
+                for filename in to_fold:
                     count = work_bot.collapse_file_in_history(filename)
                     if count:
                         log(f'折叠: {filename}（折叠了 {count} 条旧记录）')
 
-            is_finish, file_contents = bot_io.execute_tool_calls(work_bot, tool_calls)
-            if is_finish:
-                elapsed = time.time() - start_time
-                mins = int(elapsed // 60)
-                secs = int(elapsed % 60)
-                time_str = f'{mins}min {secs}s' if mins else f'{secs}s'
-                done_msg = _t(
-                    f'任务完成 ({time_str} | {total_tokens} tokens | {round_count}R)',
-                    f'Task Done ({time_str} | {total_tokens}tokens | {round_count} rounds)',
-                )
-                user_log(done_msg)
-                log('work DONE')
-                break
-
-            # 工具执行完，直接续推理，不插 user 消息
-            response = work_bot.resume(use_tools=True)
-            total_tokens += response.get('total_tokens', 0)
-            round_count += 1
             continue
 
-        # ── 情形B：纯文本兜底（无工具调用）──────────────────────────────
+        # ── 情形B：纯文本，交还控制权给用户 ───────────────────────────
         if text_content:
-            user_log(text_content, role='BOT REPORT')
-        response = work_bot.message('请继续完成任务，记得使用工具调用，在有问题时使用ask_user工具向用户提问。', use_tools=True)
-        total_tokens += response.get('total_tokens', 0)
-        round_count += 1
-
-    # ── 自由对话阶段 ────────────────────────────────────────────────────
-    cfg = get_config()
-    if not cfg.get('summary') and not cfg.get('dialogue'):
-        return
-
-    work_bot.set_system('你是 Momoka，一个工作助理。你现在需要回答用户的问题。不用格式化输出。')
-
-    if cfg.get('summary'):
-        user_log('Bot 的工作已完成，正在生成总结...')
-        res = work_bot.message('总结你刚才进行的工作', use_tools=False)
-        user_log(res['content'], role='BOT')
-
-    if cfg.get('dialogue'):
-        user_log('现在你可以与 Bot 交流（输入 /end 结束）')
-        while True:
-            user_input = multiline_input('>> ')
-            if user_input.strip() == '/end':
-                user_log('结束')
-                log('end')
-                break
-            res = work_bot.message(user_input, use_tools=False)
-            user_log(res['content'], role='BOT')
-
-
+            user_log(text_content, role='BOT')
+        return False, file_contents, input_tokens, output_tokens, round_count
 if __name__ == '__main__':
     print(TITLE + '\n' + LINE + ' 欢迎回来！这里是 Momoka v0.1 ' + LINE)
     new_log()
     log('start')
 
-    request = multiline_input('请输入你的需求（行末输入 \\ 可换行）: ')
-    user_log('开始')
-    work(request)
+    work_bot = bot.Bot(bot_name='Momoka')
+    work_bot.set_system(_build_system_prompt())
+
+    file_contents: dict[str, str] = {}
+    start_time = time.time()
+    input_tokens = 0
+    output_tokens = 0
+    round_count = 0
+
+    while True:
+        user_message = multiline_input('>> ')
+
+        if user_message.strip() == '/end':
+            elapsed = time.time() - start_time
+            mins = int(elapsed // 60)
+            secs = int(elapsed % 60)
+            time_str = f'{mins}min {secs}s' if mins else f'{secs}s'
+            print("-" * 67)
+            print(f'结束 ({time_str} | 输入: {input_tokens} tokens | 输出: {output_tokens} tokens | {round_count}R)')
+            log('end')
+            break
+
+        log(f'user: {user_message}')
+
+        response = work_bot.message(
+            user_message,
+            role='user',
+            file_contents=file_contents,
+            use_tools=True,
+        )
+        input_tokens += response.get('input_tokens', 0)
+        output_tokens += response.get('output_tokens', 0)
+        round_count += 1
+
+        is_finish, file_contents, input_tokens, output_tokens, round_count = _agent_loop(
+            work_bot, response, file_contents, input_tokens, output_tokens, round_count
+        )
+
+        if is_finish:
+            user_log('就绪')

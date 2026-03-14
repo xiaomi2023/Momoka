@@ -38,14 +38,14 @@ Momoka是一个LLM驱动的电脑操作助理，支持：
 
 * 使用Momoka与浏览器交互并生成图表
 ```bash
-请输入你的需求: 分别查找最新的北京、上海、广州的人均GDP并将数据制作成图表
+>> 分别查找最新的北京、上海、广州的人均GDP并将数据制作成图表
 [LOG] 开始
-[BOT REPORT] 为了完成需求，我将：1. 搜索北京、上海、广州的最新人均GDP数据；2. 将数据整理并制作成图表。首先，我将打开浏览器搜索数据。
+[BOT] 为了完成需求，我将：1. 搜索北京、上海、广州的最新人均GDP数据；2. 将数据整理并制作成图表。首先，我将打开浏览器搜索数据。
 ...
-[LOG] 浏览器打开：https://www.baidu.com/s?wd=上海2024年人均GDP
-[LOG] 浏览器读取页面内容
+[LOG] 打开网页: https://www.baidu.com/s?wd=上海2024年人均GDP
+[LOG] 读取页面内容...
 ...
-[BOT REPORT] 已收集到数据：北京22.82万元/人，上海21.71万元/人，广州16.42万元/人。我将制作图表。首先，在工作目录中创建一个CSV文件存储数据，然后用Python生成图表。
+[BOT] 已收集到数据：北京22.82万元/人，上海21.71万元/人，广州16.42万元/人。我将制作图表。首先，在工作目录中创建一个CSV文件存储数据，然后用Python生成图表。
 ...
 [LOG] Bot开始编辑文件：C:\Users\...\plot_gdp.py
 [LOG] 终端输入：python plot_gdp.py
@@ -90,14 +90,17 @@ python main.py
 | api_key   | string       |              调用LLM的API Key              |
 | base_url  | string       |             调用LLM的base_url              |
 | model     | string       |                调用LLM的模型名                |
-| work_dir  | string       |    Momoka工作的默认目录，编辑此目录之外的文件需要经过用户同意     |
+| work_dir  | string       |              Momoka工作的默认目录              |
 | encoding  | string       |             Momoka处理文件时的编码              |
-| summary   | bool         |           在Momoka完成工作后生成工作总结            |
-| dialogue  | bool         |           在Momoka完成工作后与Bot对话            |
 | fold      | bool         | 折叠Bot上下文中重复的文本，对于不支持缓存输入的模型建议开启以节省Token |
 | mute_log  | list[string] |    省略部分控制台日志输出，如"['CMD', 'BROWSER']"    |
-| user_call | string       |            Bot对用户的称呼，默认为null            |
-| language  | string       | Momoka的Bot使用的语言，设置“cn”以使用中文，“en”以使用英文。  |
+| user_call | string       |          Momoka对用户的称呼，默认为null           |
+| language  | string       |               Momoka使用的语言               |
+| prompt    | string       |               Momoka的提示词                |
+
+### TODO
+* 错误捕获和处理
+* 提示词注入
 
 ### License
 
@@ -133,14 +136,14 @@ All of this requires only a single instruction — every action is then carried 
 * Using Momoka to interact with a browser and generate charts
 
 ```bash
-Please enter your request: Search for the latest per capita GDP of Beijing, Shanghai, and Guangzhou and create a chart from the data
+>> Search for the latest per capita GDP of Beijing, Shanghai, and Guangzhou and create a chart from the data
 [LOG] Starting
-[BOT REPORT] To fulfill the request, I will: 1. Search for the latest per capita GDP data for Beijing, Shanghai, and Guangzhou; 2. Organize the data and create a chart. First, I will open the browser to search for the data.
+[BOT] To fulfill the request, I will: 1. Search for the latest per capita GDP data for Beijing, Shanghai, and Guangzhou; 2. Organize the data and create a chart. First, I will open the browser to search for the data.
 ...
 [LOG] Browser opened: https://www.baidu.com/s?wd=Shanghai+2024+per+capita+GDP
-[LOG] Browser reading page content
+[LOG] Reading page content...
 ...
-[BOT REPORT] Data collected: Beijing 228,200 CNY/person, Shanghai 217,100 CNY/person, Guangzhou 164,200 CNY/person. I will now create a chart. First, I will create a CSV file in the working directory to store the data, then use Python to generate the chart.
+[BOT] Data collected: Beijing 228,200 CNY/person, Shanghai 217,100 CNY/person, Guangzhou 164,200 CNY/person. I will now create a chart. First, I will create a CSV file in the working directory to store the data, then use Python to generate the chart.
 ...
 [LOG] Bot started editing file: C:\Users\...\plot_gdp.py
 [LOG] Terminal input: python plot_gdp.py
@@ -188,12 +191,15 @@ python main.py
 | model     | string       |                                                Model name for the LLM                                                 |
 | work_dir  | string       |         Default working directory for Momoka. User approval is required to edit files outside this directory          |
 | encoding  | string       |                                     Encoding used by Momoka when processing files                                     |
-| summary   | bool         |                                 Generate a work summary after Momoka completes a task                                 |
-| dialogue  | bool         |                            Enable conversation with the bot after Momoka completes a task                             |
 | fold      | bool         | Collapse repeated text in the bot's context. Recommended for models that do not support cached inputs, to save tokens |
 | mute_log  | list[string] |                            Suppress certain console log outputs, e.g. `["CMD", "BROWSER"]`                            |
 | user_call | string       |                                   How the bot addresses the user. Defaults to null                                    |
 | language  | string       |                  The language used by Momoka's Bot. Set "cn" to use Chinese, or "en" to use English.                  |
+| prompt    | string       |                                                Prompt for Momoka                                                      |
+
+### TODO
+* Error catching and handling
+* Prompt injection
 
 ### License <span id="license-en"></span>
 
