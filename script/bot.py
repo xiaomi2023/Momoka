@@ -339,6 +339,53 @@ class Bot:
             self.history.insert(0, {'role': 'system', 'content': full_system})
             self._meta.insert(0, {})
 
+    def repair_history(self) -> int:
+        """检测并修复对话历史中孤儿 tool_calls 消息（无对应 tool_result 的情况）。
+
+        当用户中断（ESC）导致 tool_calls 还未执行就退出时，历史里会留下一条
+        assistant tool_calls 消息但没有紧随的 tool 消息，下次 API 调用会报 400。
+        此方法会为每个缺失的 tool_call_id 补一条占位 tool 消息。
+
+        Returns:
+            修复的孤儿 tool_call 数量（0 表示历史无需修复）。
+        """
+        repaired = 0
+        i = 0
+        while i < len(self.history):
+            msg = self.history[i]
+            if msg.get('role') == 'assistant' and msg.get('tool_calls'):
+                # 收集该 assistant 消息的所有 tool_call_id
+                expected_ids = {tc['id'] for tc in msg['tool_calls']}
+                # 收集紧随其后的 tool 消息已覆盖的 id
+                j = i + 1
+                covered_ids: set[str] = set()
+                while j < len(self.history) and self.history[j].get('role') == 'tool':
+                    covered_ids.add(self.history[j].get('tool_call_id', ''))
+                    j += 1
+                # 找出缺失的 id，补占位消息
+                missing_ids = expected_ids - covered_ids
+                if missing_ids:
+                    placeholder_msgs = []
+                    placeholder_metas = []
+                    for tc_id in missing_ids:
+                        placeholder_msgs.append({
+                            'role': 'tool',
+                            'tool_call_id': tc_id,
+                            'content': '（已中断，工具未执行）',
+                        })
+                        placeholder_metas.append({})
+                        repaired += 1
+                    # 插入到紧随 assistant 消息之后（j 是第一个非 tool 消息的位置）
+                    self.history[i + 1:i + 1] = placeholder_msgs
+                    self._meta[i + 1:i + 1] = placeholder_metas
+                    log(f'bot.repair_history | 补全 {len(missing_ids)} 个孤儿 tool_result: {missing_ids}')
+                    i = j + len(missing_ids)
+                else:
+                    i = j
+            else:
+                i += 1
+        return repaired
+
     def collapse_file_in_history(self, filename: str) -> int:
         """将对话历史中除最后一次之外、所有包含指定文件内容的消息折叠。
 
