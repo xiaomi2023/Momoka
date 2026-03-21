@@ -63,8 +63,8 @@ git clone https://github.com/xiaomi2023/Momoka/
 
 #### 2、配置环境
 ```bash
-pip install openai playwright
-playwright install chromium
+pip install openai rebrowser_playwright
+rebrowser_playwright install chromium
 ```
 
 #### 3、在config.json配置LLM的API和工作目录
@@ -93,10 +93,9 @@ python main.py
 | work_dir  | string       |              Momoka工作的默认目录              |
 | encoding  | string       |             Momoka处理文件时的编码              |
 | fold      | bool         | 折叠Bot上下文中重复的文本，对于不支持缓存输入的模型建议开启以节省Token |
-| mute_log  | list[string] |    省略部分控制台日志输出，如"['CMD', 'BROWSER']"    |
-| user_call | string       |          Momoka对用户的称呼，默认为null           |
+| mute_log  | list[string] |   省略部分控制台日志输出，如"['SHELL', 'BROWSER']"   |
 | language  | string       |               Momoka使用的语言               |
-| prompt    | string       |               Momoka的提示词                |
+| prompt    | string       |              Momoka的系统提示词               |
 
 ### License
 
@@ -188,10 +187,9 @@ python main.py
 | work_dir  | string       |         Default working directory for Momoka. User approval is required to edit files outside this directory          |
 | encoding  | string       |                                     Encoding used by Momoka when processing files                                     |
 | fold      | bool         | Collapse repeated text in the bot's context. Recommended for models that do not support cached inputs, to save tokens |
-| mute_log  | list[string] |                            Suppress certain console log outputs, e.g. `["CMD", "BROWSER"]`                            |
-| user_call | string       |                                   How the bot addresses the user. Defaults to null                                    |
+| mute_log  | list[string] |                           Suppress certain console log outputs, e.g. `["SHELL", "BROWSER"]`                           |
 | language  | string       |                  The language used by Momoka's Bot. Set "cn" to use Chinese, or "en" to use English.                  |
-| prompt    | string       |                                                Prompt for Momoka                                                      |
+| prompt    | string       |                                               System Prompt for Momoka                                                |
 
 ### License <span id="license-en"></span>
 
