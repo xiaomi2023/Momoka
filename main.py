@@ -46,11 +46,8 @@ def _agent_loop(work_bot, response, file_contents: dict,
             round_count += 1
 
             # resume 跑完后再次检查（用户在 resume 期间按了 ESC）
-            if response.get('interrupted'):
-                if response['content']:
-                    user_log(response['content'], role='BOT')
-                return False, file_contents, input_tokens, output_tokens, round_count
-
+            # 不立即 return：让循环继续执行 resume 返回的 tool_calls（如有），
+            # 执行完后上方第 40 行的 interrupted 检查会负责退出，避免产生孤儿消息。
             continue
 
         # ── 情形B：纯文本，交还控制权给用户 ───────────────────────────
@@ -104,6 +101,11 @@ if __name__ == '__main__':
 
         if handled and skill_name is None:
             continue
+
+        # 中断恢复：补全历史中可能残留的孤儿 tool_calls 消息，防止 API 报 400
+        repaired = work_bot.repair_history()
+        if repaired:
+            log(f'main | repair_history: 补全了 {repaired} 个孤儿 tool_result')
 
         if handled and skill_name is not None:
             log(f'skill trigger: {skill_name}')

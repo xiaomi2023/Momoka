@@ -138,11 +138,22 @@ TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "set_wait",
-            "description": "设置操作的最大超时时长（秒）。默认为 10 秒。",
+            "description": (
+                "设置操作的最大超时时长（秒）。\n"
+                "target='default' 调整通用超时（默认 10 秒），影响所有浏览器操作和命令执行。\n"
+                "target='download' 调整浏览器文件下载超时（默认 60 秒），仅影响 browse_download。\n"
+                "下载大文件前应先将 download 超时调高。"
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "seconds": {"type": "integer", "description": "超时时长（秒）"},
+                    "target": {
+                        "type": "string",
+                        "enum": ["default", "download"],
+                        "description": "要调整的超时目标。",
+                        "default": "default",
+                    },
                 },
                 "required": ["seconds"],
             },
@@ -514,6 +525,7 @@ TOOLS: list[dict] = [
             "description": (
                 "点击指定 ID 对应的下载链接或按钮，等待浏览器下载完成，"
                 "并将文件保存到指定目录。\n"
+                "下载超时默认 60 秒，下载大文件前可先用 set_wait(target='download') 调高。"
             ),
             "parameters": {
                 "type": "object",

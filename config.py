@@ -2,8 +2,8 @@ import json
 import os
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(_HERE, 'config.json')
-WORKING_CONFIG_FILE = os.path.join(_HERE, 'working_config.json')
+CONFIG_FILE = os.path.join(_HERE, 'config_tmp.json')
+WORKING_CONFIG_FILE = os.path.join(_HERE, 'working_config_tmp.json')
 
 
 # ── 静态配置（config.json）────────────────────────────────────────────────────
@@ -48,8 +48,13 @@ def set_where(path: str):
 
 
 def set_wait(seconds: int):
-    """更新超时时长到运行时配置。"""
+    """更新通用超时时长到运行时配置。"""
     _update_working_config(wait=seconds)
+
+
+def set_wait_download(seconds: int):
+    """更新浏览器下载专用超时时长到运行时配置。"""
+    _update_working_config(wait_download=seconds)
 
 
 def set_read_limits(max_lines: int | None = None, max_size_kb: int | None = None):
@@ -74,6 +79,7 @@ _static = json.load(open(CONFIG_FILE, encoding='utf-8'))
 _update_working_config(
     where=_static['work_dir'],
     wait=10,
+    wait_download=60,
     read_max_lines=1000,
     read_max_size_kb=100,
 )

@@ -131,8 +131,7 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
     interactive_items: list[dict] = []
 
     # ── 正文：通过 JS 遍历可见文字节点 ─────────────────────────────────
-    try:
-        raw_text = page.evaluate("""() => {
+    _js_text = """() => {
             const lines = [];
             const walker = document.createTreeWalker(
                 document.body, NodeFilter.SHOW_TEXT, null
@@ -149,10 +148,21 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
                 lines.push(t);
             }
             return lines;
-        }""")
-        text_lines = [t for t in (raw_text or []) if t.strip()]
-    except Exception as e:
-        log(f"browser | text extraction error: {e}")
+        }"""
+    for _attempt in range(3):
+        try:
+            raw_text = page.evaluate(_js_text)
+            text_lines = [t for t in (raw_text or []) if t.strip()]
+            break
+        except Exception as e:
+            _err_str = str(e)
+            # rebrowser-playwright context 切换竞态：稍等后重试
+            if "Cannot find context with specified id" in _err_str and _attempt < 2:
+                log(f"browser | text extraction context error (attempt {_attempt+1}), retrying...")
+                time.sleep(0.5)  # 增大重试间隔，给上下文切换更多稳定时间
+                continue
+            log(f"browser | text extraction error: {e}")
+            break
 
     # ── 可交互元素：按 role 逐一查询，不去重，全部保留 ────────────────────
     for role in _INTERACTIVE_ROLES:
@@ -354,6 +364,11 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
             page.wait_for_load_state("networkidle", timeout=5000)
         except Exception:
             pass  # 超时无妨，继续
+        # rebrowser-playwright 每次导航后都会重新注入反检测脚本，
+        # 此过程发生在 networkidle 之后，期间调用 evaluate() 会报
+        # "Cannot find context with specified id"，需统一等待稳定。
+        if _USING_REBROWSER:
+            time.sleep(0.5)  # 给 rebrowser 注入脚本留出稳定窗口（对所有页面生效）
         title = page.title()
         return f"已打开页面: {url}\n标题: {title}"
     except Exception as e:
@@ -670,6 +685,9 @@ def browser_search(query: str, engine: str = 'google') -> str:
             page.wait_for_load_state("networkidle", timeout=5000)
         except Exception:
             pass  # 超时无妨，继续
+        # 给 rebrowser 注入脚本留出稳定窗口，防止后续 evaluate() 报上下文错误
+        if _USING_REBROWSER:
+            time.sleep(0.5)
         title = page.title()
         return f"已打开页面: {url}\n标题: {title}"
     except Exception as e:
@@ -898,7 +916,8 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
 
     try:
         os.makedirs(save_dir, exist_ok=True)
-        with _page.expect_download(timeout=_timeout_ms()) as dl_info:
+        download_timeout_ms = get_config().get('wait_download', 60) * 1000
+        with _page.expect_download(timeout=download_timeout_ms) as dl_info:
             handle = _resolve_element(_page, item)
             if handle is None:
                 return f"下载失败: 无法定位元素 {label}"

@@ -34,11 +34,17 @@ def _execute_tool(name: str, args: dict,
 
         # ── set_wait ────────────────────────────────────────────────────
         case 'set_wait':
-            from config import set_wait
+            from config import set_wait, set_wait_download
             seconds = int(args.get('seconds', 10))
-            set_wait(seconds)
-            user_log(f'The timeout duration has been set to: {seconds} seconds', role="SETTINGS")
-            return f'超时时长已更新为 {seconds} 秒', {}, False
+            target = args.get('target', 'default')
+            if target == 'download':
+                set_wait_download(seconds)
+                user_log(f'Browser download timeout set to: {seconds}s', role='SETTINGS')
+                return f'浏览器下载超时时长已更新为 {seconds} 秒', {}, False
+            else:
+                set_wait(seconds)
+                user_log(f'Timeout set to: {seconds}s', role='SETTINGS')
+                return f'超时时长已更新为 {seconds} 秒', {}, False
 
         # ── set_read_limits ─────────────────────────────────────────────
         case 'set_read_limits':
