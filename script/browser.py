@@ -349,6 +349,11 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
     log(f"browser | OPEN {url}")
     try:
         page.goto(url, wait_until=wait_until, timeout=_timeout_ms())
+        # 等待网络空闲，确保 rebrowser JS context 稳定后再返回
+        try:
+            page.wait_for_load_state("networkidle", timeout=5000)
+        except Exception:
+            pass  # 超时无妨，继续
         title = page.title()
         return f"已打开页面: {url}\n标题: {title}"
     except Exception as e:
@@ -619,7 +624,7 @@ def browser_pdf(save_dir: str = ".") -> str:
 
         size = os.path.getsize(filename)
         log(f"browser | PDF saved to {filename} ({size} bytes)")
-        user_log(f"Save PDF: {filename}（{size / 1024:.1f} KB）", role='BROWSER')
+        user_log(f"Save PDF: {filename} ({size / 1024:.1f} KB)", role='BROWSER')
         return f"PDF has been saved at: {filename}"
     except Exception as e:
         log(f"browser | PDF error: {e}")
@@ -657,7 +662,19 @@ def browser_search(query: str, engine: str = 'google') -> str:
         return f"不支持的搜索引擎: {engine!r}。支持: {', '.join(SEARCH_ENGINES)}"
     url = base_url + quote_plus(query)
     log(f"browser | SEARCH [{engine}] {query!r} → {url}")
-    return browser_open(url)
+    page = _ensure_browser()
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=_timeout_ms())
+        # 搜索结果页可能有重定向，额外等待网络空闲，确保 JS context 稳定
+        try:
+            page.wait_for_load_state("networkidle", timeout=5000)
+        except Exception:
+            pass  # 超时无妨，继续
+        title = page.title()
+        return f"已打开页面: {url}\n标题: {title}"
+    except Exception as e:
+        log(f"browser | SEARCH error: {e}")
+        return f"搜索失败: {e}"
 
 
 def browser_switch(index: int) -> str:

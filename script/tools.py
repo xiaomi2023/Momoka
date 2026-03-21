@@ -505,7 +505,7 @@ def _execute_tool(name: str, args: dict,
         case 'browse_eval':
             from script.browser import browser_eval
             script = args.get('script', '')
-            user_log(f'Eval: {script}', role='BROWSER')
+            user_log(f'Eval: \n{script}', role='BROWSER')
             return browser_eval(script), {}, False
 
         case 'browse_wait_for_navigation':
