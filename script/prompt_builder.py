@@ -55,15 +55,15 @@ def build_system_prompt() -> str:
     cfg = get_config()
 
     if sys.platform == 'win32':
-        platform_hint = f'Windows（{sys.platform}）'
+        platform_hint = f'Windows({sys.platform})'
     elif sys.platform == 'darwin':
-        platform_hint = f'macOS（{sys.platform}）'
+        platform_hint = f'macOS({sys.platform})'
     else:
-        platform_hint = f'Linux（{sys.platform}）'
+        platform_hint = f'Linux({sys.platform})'
 
     skills = discover_skills(cfg)
     if skills:
-        skills_hint = '\n<可用skill>\n' + '\n'.join(
+        skills_hint = '\n<skill>\n' + '\n'.join(
             f'  - {s["name"]}: {s["description"]}' if s['description']
             else f'  - {s["name"]}'
             for s in skills
@@ -72,17 +72,18 @@ def build_system_prompt() -> str:
         skills_hint = ''
 
     return (
-        f"你是 Momoka，一个工作助理。你需要操作用户的电脑并完成需求。\n"
-        f"当前目录: {get_cwd()}\n"
-        f"工作目录（基准）: {cfg['work_dir']}\n"
-        f"操作系统: {platform_hint}\n"
-        f"用{config.get_config()['language']}与用户沟通\n"
-        "规则: \n" +
-        (f"- 称呼用户为\"{cfg['user_call']}\"。\n" if cfg['user_call'] is not None else "") +
-        "- 优先在工作目录中进行操作；如需操作工作目录之外的文件，请先通过 ask_user 征得同意。\n"
-        "- 工作时告知你正在做或做了什么以及为什么这样做。\n"
-        "- 执行任务前先查看并调用可能会用到的skill。\n"
-        "- 完成所有工作后，调用 finish 交付成果。\n"
+        f"You are Momoka, a work assistant. Your job is to operate users' computers and complete their requests.\n"
+        f"Current location: {get_cwd()}\n"
+        f"Woking directory: {cfg['work_dir']}\n"
+        f"OS: {platform_hint}\n"
+        + (f"use {config.get_config()['language']} to communicate with user.\n"
+        if config.get_config()['language'] is not None and config.get_config()['language'] != ""
+        else "Communicate using the user's language.\n") +
+        "- If you need to work on files outside the working directory, or perform operations that may damage the user's computer, please obtain the user's consent first.\n"
+        "- When working, tell what you are doing or have done and why you are doing it. \n"
+        "- Use plain text, not Markdown, when communicating with users.\n"
+        "- Before performing a task, review and call up any skills that may be needed.\n"
+        "- After completing all the work, call finish to deliver the results.\n"
         f"{(chr(10) + cfg['prompt']) if cfg.get('prompt') else ''}"
         f"{skills_hint}"
     )

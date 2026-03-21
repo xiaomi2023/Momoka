@@ -1,7 +1,9 @@
 import json
+import os
 
-CONFIG_FILE = 'config_tmp.json'
-WORKING_CONFIG_FILE = 'working_config_tmp.json'
+_HERE = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(_HERE, 'config.json')
+WORKING_CONFIG_FILE = os.path.join(_HERE, 'working_config.json')
 
 
 # ── 静态配置（config.json）────────────────────────────────────────────────────
@@ -50,10 +52,28 @@ def set_wait(seconds: int):
     _update_working_config(wait=seconds)
 
 
+def set_read_limits(max_lines: int | None = None, max_size_kb: int | None = None):
+    """更新文件阅读限制到运行时配置。
+
+    Args:
+        max_lines:    最大行数上限，不超过 50000 行。
+        max_size_kb:  最大体积上限（KB），不超过 5120 KB（5 MB）。
+    """
+    updates = {}
+    if max_lines is not None:
+        updates['read_max_lines'] = min(max_lines, 50000)
+    if max_size_kb is not None:
+        updates['read_max_size_kb'] = min(max_size_kb, 5120)
+    if updates:
+        _update_working_config(**updates)
+
+
 # ── 模块加载时初始化运行时状态 ────────────────────────────────────────────────
 # 将 where 重置为 work_dir，确保每次启动从工作目录开始
 _static = json.load(open(CONFIG_FILE, encoding='utf-8'))
 _update_working_config(
     where=_static['work_dir'],
     wait=10,
+    read_max_lines=1000,
+    read_max_size_kb=100,
 )

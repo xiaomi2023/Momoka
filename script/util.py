@@ -14,10 +14,10 @@ from config import get_config
 SLASH_HELP = (
     "  /end            — 结束会话并显示用量统计\n"
     "  /usage          — 显示当前 token 用量\n"
-    "  /config         — 显示 config.json 配置\n"
-    "  /working_config — 显示 working_config 配置\n"
-    "  /skill_name     — 加载并执行指定skill\n"
-    "  /help           — 显示帮助\n"
+    "  /config         — show config.json\n"
+    "  /working_config — show working_config\n"
+    "  /skill_name     — 加载指定skill\n"
+    "  /help           — show help\n"
 )
 
 
@@ -52,8 +52,8 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
         mins = int(elapsed // 60)
         secs = int(elapsed % 60)
         time_str = f'{mins}min {secs}s' if mins else f'{secs}s'
-        print(f'用量: 输入 {input_tokens} tokens | 输出 {output_tokens} tokens | '
-              f'{round_count}R | 已用时 {time_str}\n')
+        print(f'Usage: Input {input_tokens} tokens | Output {output_tokens} tokens | '
+              f'{round_count}R | Time taken {time_str}\n')
         return True, None
 
     if cmd == '/config':
@@ -62,7 +62,7 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
             display = {k: ('***' if 'key' in k.lower() else v) for k, v in cfg.items()}
             print(json.dumps(display, ensure_ascii=False, indent=2), end='\n\n')
         except Exception as e:
-            print(f'读取 config 失败: {e}\n')
+            print(f'Failed in reading config: {e}\n')
         return True, None
 
     if cmd == '/working_config':
@@ -71,7 +71,7 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
             wc = get_working_config()
             print(json.dumps(wc, ensure_ascii=False, indent=2), end='\n\n')
         except Exception as e:
-            print(f'读取 working_config 失败: {e}\n')
+            print(f'Failed in reading working_config: {e}\n')
         return True, None
 
     if cmd == '/help':
@@ -84,7 +84,7 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
     if m:
         return True, m.group(1).strip()
     if cmd.startswith('/'):
-        print(f'未知命令: {cmd}\n')
+        print(f'Unknown command: {cmd}\n')
         return True, None
 
     return False, None

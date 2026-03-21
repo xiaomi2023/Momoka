@@ -1,5 +1,5 @@
 from config import get_config
-from script.logger import log, chat_log, user_log
+from script.logger import log, chat_log, user_log, _rich_available
 from openai import OpenAI
 from openai import (
     APIConnectionError,
@@ -11,8 +11,12 @@ from openai import (
 )
 import sys
 import threading
-import itertools
 import time
+
+if _rich_available:
+    from rich.console import Console
+    from rich.status import Status
+    _spinner_console = Console(highlight=False)
 
 
 def _openai_call(fn, *args, **kwargs):
@@ -24,50 +28,119 @@ def _openai_call(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
     except AuthenticationError as e:
-        user_log(f'认证失败: API Key 无效或已过期。({e})', role='ERROR')
+        user_log(f'Authentication failed: API Key is invalid or expired. ({e})', role='ERROR')
     except PermissionDeniedError as e:
-        user_log(f'权限不足: 该 API Key 无权访问指定模型或接口。({e})', role='ERROR')
+        user_log(f'Permission denied: This API Key does not have access to the specified model or endpoint. ({e})', role='ERROR')
     except RateLimitError as e:
-        user_log(f'速率限制: 请求过于频繁或额度已耗尽，请稍后重试。({e})', role='ERROR')
+        user_log(f'Rate limit exceeded: Too many requests or quota exhausted, please try again later. ({e})', role='ERROR')
     except APITimeoutError as e:
-        user_log(f'请求超时: 服务端未在规定时间内响应，请检查网络或稍后重试。({e})', role='ERROR')
+        user_log(f'Request timed out: The server did not respond in time, please check your network or try again later. ({e})', role='ERROR')
     except APIConnectionError as e:
-        user_log(f'连接失败: 无法连接到 API 服务，请检查网络或 base_url 配置。({e})', role='ERROR')
+        user_log(f'Connection failed: Unable to reach the API service, please check your network or base_url configuration. ({e})', role='ERROR')
     except APIStatusError as e:
-        user_log(f'API 错误 {e.status_code}：{e.message}', role='ERROR')
+        user_log(f'API error {e.status_code}: {e.message}', role='ERROR')
     except Exception as e:
-        user_log(f'未知错误：{type(e).__name__}: {e}', role='ERROR')
+        user_log(f'Unknown error: {type(e).__name__}: {e}', role='ERROR')
     return None
 
 
 # ── 终端等待动画 ──────────────────────────────────────────────────────────
 class Spinner:
-    """在 API 请求期间显示旋转动画，仅在交互式终端下启用。"""
+    """在 API 请求期间显示等待动画，仅在交互式终端下启用。
+
+    有 rich 时使用 rich.Status（自带动画线程，支持动态更新文字）；
+    无 rich 时降级为原始手写旋转动画。
+    支持按 ESC 键中断，中断后会在当前步骤完成后交还控制权。
+    """
     _enabled = sys.stdout.isatty()
 
-    def __init__(self):
-        self._stop = threading.Event()
-        self._thread = threading.Thread(target=self._spin, daemon=True)
+    # ── rich 版消息 ────────────────────────────────────────────────────
+    _MSG_NORMAL       = '[dim]Press ESC to Interrupt[/dim]'
+    _MSG_INTERRUPTING = '[red]Interrupting...[/red][dim](Press Ctrl+C to force stop)[/dim]'
 
-    def _spin(self):
-        for ch in itertools.cycle(['-', '\\', '|', '/']):
+    def __init__(self):
+        self._stop        = threading.Event()
+        self._interrupted = threading.Event()
+        self._input_thread: threading.Thread | None = None
+
+        # rich 路径用到的对象
+        self._status: 'Status | None' = None
+
+        # 降级路径用到的线程
+        self._spin_thread: threading.Thread | None = None
+
+    # ── 降级：手写旋转动画（rich 不可用时）────────────────────────────
+    def _spin_plain(self):
+        import itertools
+        for ch in itertools.cycle(['—', '\\', '|', '/']):
             if self._stop.is_set():
                 break
-            sys.stdout.write(f'\r{ch} ')
+            if self._interrupted.is_set():
+                line = f'\rInterrupting...(Press Ctrl+C to force stop) {ch}'
+            else:
+                line = f'\r(Press ESC to Interrupt) {ch} '
+            sys.stdout.write(line)
             sys.stdout.flush()
             time.sleep(0.25)
-        sys.stdout.write('\r  \r')
+        sys.stdout.write('\r' + ' ' * 40 + '\r')
         sys.stdout.flush()
 
+    # ── ESC 检测（Windows only，非 Windows 静默忽略）─────────────────
+    def _check_input(self):
+        try:
+            import msvcrt
+            while not self._stop.is_set():
+                if msvcrt.kbhit():
+                    key = msvcrt.getch()
+                    if key == b'\x1b':          # ESC = 0x1b
+                        self._interrupted.set()
+                        if self._status is not None:
+                            self._status.update(self._MSG_INTERRUPTING)
+                        while msvcrt.kbhit():   # 清空剩余按键
+                            msvcrt.getch()
+                        break
+                time.sleep(0.05)
+        except Exception:
+            pass
+
+    # ── 上下文管理器 ───────────────────────────────────────────────────
     def __enter__(self):
-        if self._enabled:
-            self._thread.start()
+        if not self._enabled:
+            return self
+
+        if _rich_available:
+            self._status = _spinner_console.status(
+                self._MSG_NORMAL,
+                spinner='dots',
+                spinner_style='cyan',
+            )
+            self._status.__enter__()
+        else:
+            self._spin_thread = threading.Thread(target=self._spin_plain, daemon=True)
+            self._spin_thread.start()
+
+        self._input_thread = threading.Thread(target=self._check_input, daemon=True)
+        self._input_thread.start()
         return self
 
     def __exit__(self, *_):
-        if self._enabled:
-            self._stop.set()
-            self._thread.join()
+        if not self._enabled:
+            return
+
+        self._stop.set()
+
+        if _rich_available and self._status is not None:
+            self._status.__exit__(None, None, None)
+            self._status = None
+        elif self._spin_thread is not None:
+            self._spin_thread.join()
+
+        if self._input_thread:
+            self._input_thread.join(timeout=0.1)
+
+    def is_interrupted(self) -> bool:
+        """返回是否收到了中断信号。"""
+        return self._interrupted.is_set()
 
 # ── Tool 定义（JSON Function Call 格式）────────────────────────────────────
 from script.tools_def import *
@@ -117,7 +190,7 @@ class Bot:
             kwargs['tool_choice'] = 'auto'
 
         # noinspection PyTypeChecker
-        with Spinner():
+        with Spinner() as spinner:
             response = _openai_call(self.openai.chat.completions.create, **kwargs)
 
         if response is None:
@@ -164,6 +237,7 @@ class Bot:
             'tool_calls': tool_calls,
             'input_tokens': response.usage.prompt_tokens if response.usage else 0,
             'output_tokens': response.usage.completion_tokens if response.usage else 0,
+            'interrupted': spinner.is_interrupted(),
         }
 
     def add_tool_result(self, tool_call_id: str, result: str,
@@ -191,7 +265,7 @@ class Bot:
             kwargs['tool_choice'] = 'auto'
 
         # noinspection PyTypeChecker
-        with Spinner():
+        with Spinner() as spinner:
             response = _openai_call(self.openai.chat.completions.create, **kwargs)
 
         if response is None:
@@ -230,6 +304,7 @@ class Bot:
             'tool_calls': tool_calls,
             'input_tokens': response.usage.prompt_tokens if response.usage else 0,
             'output_tokens': response.usage.completion_tokens if response.usage else 0,
+            'interrupted': spinner.is_interrupted(),
         }
 
     def set_system(self, system: str):
@@ -270,7 +345,7 @@ class Bot:
         通过 _meta 中记录的原始文件内容精确定位并替换，无需正则匹配。
         返回折叠的消息条数。
         """
-        placeholder = f'[文件内容已折叠: {filename}]'
+        placeholder = f'[Collapse file contents: {filename}]'
         hits = [
             i for i, m in enumerate(self._meta)
             if filename in m.get('file_contents', {})

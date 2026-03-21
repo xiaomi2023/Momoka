@@ -6,7 +6,6 @@
   "encoding": "utf-8",
   "fold": true,
   "mute_log": [],
-  "user_call": null,
-  "language": "Chinese",
+  "language": null,
   "prompt": null
 }
