@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="image/logo.png" alt="Momoka Logo" width="300">
+  <img src="image/logo.png" alt="Momoka Logo" width="400">
   <h1>Momoka v0.2</h1>
   <p>"ふふ、待ってたよ~"</p>
   <p>
@@ -30,10 +30,16 @@
 
 #### Connect to any AI model supporting OpenAI SDK such as ChatGPT, Gemini, Claude, Deepseek, GLM, Kimi, and run Momoka in the terminal.
 
-![](image/1.gif "")
+<div align="center">
+  <img src="image/1.gif" width="400">
+</div>
+
 - #### With rich built-in tools, Momoka can automatically complete the full process of project building, debugging and iteration.
 
-![](image/2.gif "")
+<div align="center">
+  <img src="image/2.gif" width="400">
+</div>
+
 - #### Through optimized web page parsing and browser fingerprint, Momoka improves task success rate and reduces token consumption in complex web environments.
 
 ## 🚀 Quick Start
