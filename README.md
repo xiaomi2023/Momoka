@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="image/logo.png" alt="Momoka Logo" width="300">
+  <img src="image/logo.png" alt="Momoka Logo" width="400">
   <h1>Momoka v0.2</h1>
   <p>"ふふ、待ってたよ~"</p>
   <p>
@@ -30,10 +30,16 @@
 
 #### 连接至ChatGPT、Gemini、Claude、Deepseek、GLM、Kimi等支持Openai SDK的任意AI模型，并在终端中运行Momoka。
 
-![](image/1.gif "")
+<div align="center">
+  <img src="image/1.gif" width="400">
+</div>
+
 - #### 运用丰富的内置工具，Momoka可以自动完成项目构建、调试和迭代的全流程。
 
-![](image/2.gif "")
+<div align="center">
+  <img src="image/2.gif" width="400">
+</div>
+
 - #### 通过经过优化的网页解析和浏览器指纹，Momoka可以在复杂的网页环境中提高任务成功率及降低Token消耗。
 
 ## 🚀 快速开始
