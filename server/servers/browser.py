@@ -1,5 +1,10 @@
 """
-browser.py —— 基于 Playwright 的浏览器操作模块（无障碍树版）。
+server/servers/browser.py —— 浏览器工具处理器。
+
+所有 browse_* 工具统一由 dispatch() 入口分发，
+browse_read 的历史去重逻辑在此处处理（需要 work_model，由 router 传入）。
+
+基于 Playwright 的浏览器操作模块（无障碍树版）。
 
 支持的操作：
     BROWSE_OPEN                  打开网页
@@ -33,11 +38,43 @@ browser.py —— 基于 Playwright 的浏览器操作模块（无障碍树版�
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 from typing import Optional
+from urllib.parse import quote_plus
 
-from script.logger import log, user_log
+from logger import log
+from server import ToolResult, ToolContext
+
+# ── 导入 Playwright ────────────────────────────────────────────────────────
+from rebrowser_playwright.sync_api import sync_playwright, Page, Browser, Playwright
+
+# ── 全局单例 ──────────────────────────────────────────────────────────────
+_pw: Optional["Playwright"] = None
+_browser: Optional["Browser"] = None
+_page: Optional["Page"] = None
+
+# UUID → 元素元数据映射（每次 browse_read 后重建）
+_item_map: dict[str, dict] = {}
+
+
+# ── 可交互 role 列表（顺序决定枚举优先级）───────────────────────────────────
+_INTERACTIVE_ROLES: list[str] = [
+    'button', 'link', 'textbox', 'searchbox', 'combobox',
+    'checkbox', 'radio', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
+    'option', 'switch', 'tab', 'slider', 'spinbutton',
+    'listbox', 'treeitem', 'gridcell',
+]
+_INTERACTIVE_ROLES_SET = set(_INTERACTIVE_ROLES)
+
+
+SEARCH_ENGINES = {
+    'google': 'https://www.google.com/search?q=',
+    'bing': 'https://www.bing.com/search?q=',
+    'baidu': 'https://www.baidu.com/s?wd=',
+    'duckduckgo': 'https://duckduckgo.com/?q=',
+}
 
 
 def _timeout_ms() -> int:
@@ -48,74 +85,86 @@ def _timeout_ms() -> int:
         return 10_000
 
 
-# ── 延迟导入 Playwright（优先使用 rebrowser_playwright）────────────────
-try:
-    from rebrowser_playwright.sync_api import sync_playwright, Page, Browser, Playwright
-    _PLAYWRIGHT_AVAILABLE = True
-    _USING_REBROWSER = True
-except ImportError:
-    _USING_REBROWSER = False
-    try:
-        from playwright.sync_api import sync_playwright, Page, Browser, Playwright
-        _PLAYWRIGHT_AVAILABLE = True
-    except ImportError:
-        _PLAYWRIGHT_AVAILABLE = False
-
-# ── 全局单例 ──────────────────────────────────────────────────────────────
-_pw: Optional["Playwright"] = None
-_browser: Optional["Browser"] = None
-_page: Optional["Page"] = None
-
-# UUID → 元素元数据映射（每次 browse_read 后重建）
-_item_map: dict[str, dict] = {}
-
-# 全局递增计数器，每次 browse_read 时从1重新计数
-_uuid_counter: int = 0
+def _make_uid(role: str, locator_name: str, index: int, seen: set) -> str:
+    """基于 role + locator_name + index 生成稳定的 6 位 16 进制 ID，碰撞时加后缀。"""
+    raw = hashlib.md5(f"{role}|{locator_name}|{index}".encode()).hexdigest()[:6]
+    uid = raw
+    while uid in seen:
+        uid += "x"
+    seen.add(uid)
+    return uid
 
 
-def _next_uuid() -> str:
-    global _uuid_counter
-    _uuid_counter += 1
-    return str(_uuid_counter)
+_CONTEXT_ERR = "Cannot find context with specified id"
+
+
+def _safe_evaluate(page: "Page", script, arg=None, *, retries: int = 4,
+                   base_delay: float = 0.4) -> object:
+    """带重试的 page.evaluate()，专门应对 rebrowser-playwright context 竞态。
+
+    rebrowser 每次导航后会重新注入反检测脚本，旧 context 会短暂失效，
+    直接调用 evaluate() 会抛出 "Cannot find context with specified id"。
+    本函数以指数退避重试，彻底消除该竞态窗口。
+
+    Args:
+        page:       Playwright Page 对象。
+        script:     传给 page.evaluate() 的 JS 字符串或函数。
+        arg:        可选参数，透传给 evaluate()。
+        retries:    最大重试次数（默认 4）。
+        base_delay: 首次重试等待秒数，后续翻倍（默认 0.4s）。
+    Returns:
+        evaluate() 的返回值。
+    Raises:
+        最后一次异常（非 context 错误会立即抛出）。
+    """
+    delay = base_delay
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            if arg is not None:
+                return page.evaluate(script, arg)
+            return page.evaluate(script)
+        except Exception as e:
+            err_str = str(e)
+            if _CONTEXT_ERR not in err_str:
+                raise  # 非 context 错误，立即抛出
+            last_exc = e
+            if attempt < retries:
+                log(f"browser | _safe_evaluate context error (attempt {attempt + 1}/{retries}), "
+                    f"retry in {delay:.1f}s...")
+                time.sleep(delay)
+                delay = min(delay * 2, 3.0)  # 指数退避，上限 3 秒
+    raise last_exc
+
+
+_USER_AGENT = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+    'AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Chrome/123.0.0.0 Safari/537.36'
+)
+
+_LAUNCH_ARGS = [
+    '--disable-blink-features=AutomationControlled',
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
+]
 
 
 def _ensure_browser(headless: bool = True) -> "Page":
     global _pw, _browser, _page
 
-    if not _PLAYWRIGHT_AVAILABLE:
-        raise RuntimeError(
-            "Playwright is not installed. Please run: pip install rebrowser-playwright && "
-            "python -m rebrowser_playwright install chromium"
-        )
-
     if _page is None or _page.is_closed():
         if _browser is None or not _browser.is_connected():
             if _pw is None:
-                if not _USING_REBROWSER:
-                    user_log(
-                        "rebrowser-playwright is not installed, falling back to playwright",
-                        role='WARN',
-                    )
                 _pw = sync_playwright().start()
-            _browser = _pw.chromium.launch(headless=headless)
-        _page = _browser.new_page()
-        backend = "rebrowser-playwright" if _USING_REBROWSER else "playwright"
-        log(f"browser | 新建浏览器页面 [{backend}]")
+            _browser = _pw.chromium.launch(headless=headless, args=_LAUNCH_ARGS)
+        _page = _browser.new_page(user_agent=_USER_AGENT)
+        log("browser | 新建浏览器页面 [rebrowser-playwright]")
 
     return _page
 
 
 # ── 无障碍树解析（基于 locator，兼容新版 Playwright）────────────────────
-
-# 可交互 role 列表（顺序决定枚举优先级）
-_INTERACTIVE_ROLES: list[str] = [
-    'button', 'link', 'textbox', 'searchbox', 'combobox',
-    'checkbox', 'radio', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
-    'option', 'switch', 'tab', 'slider', 'spinbutton',
-    'listbox', 'treeitem', 'gridcell',
-]
-_INTERACTIVE_ROLES_SET = set(_INTERACTIVE_ROLES)
-
 
 def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
     """用 locator 查询页面，返回 (text_lines, interactive_items)。
@@ -149,22 +198,14 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
             }
             return lines;
         }"""
-    for _attempt in range(3):
-        try:
-            raw_text = page.evaluate(_js_text)
-            text_lines = [t for t in (raw_text or []) if t.strip()]
-            break
-        except Exception as e:
-            _err_str = str(e)
-            # rebrowser-playwright context 切换竞态：稍等后重试
-            if "Cannot find context with specified id" in _err_str and _attempt < 2:
-                log(f"browser | text extraction context error (attempt {_attempt+1}), retrying...")
-                time.sleep(0.5)  # 增大重试间隔，给上下文切换更多稳定时间
-                continue
-            log(f"browser | text extraction error: {e}")
-            break
+    try:
+        raw_text = _safe_evaluate(page, _js_text)
+        text_lines = [t for t in (raw_text or []) if t.strip()]
+    except Exception as e:
+        log(f"browser | text extraction error: {e}")
 
     # ── 可交互元素：按 role 逐一查询，不去重，全部保留 ────────────────────
+    seen_uids: set = set()
     for role in _INTERACTIVE_ROLES:
         try:
             locator = page.get_by_role(role)  # type: ignore[arg-type]
@@ -209,7 +250,7 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
                 except Exception:
                     visible = False
 
-                uid = _next_uuid()
+                uid = _make_uid(role, locator_name, i, seen_uids)
                 interactive_items.append({
                     'uuid': uid,
                     'role': role,
@@ -366,10 +407,12 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
             pass  # 超时无妨，继续
         # rebrowser-playwright 每次导航后都会重新注入反检测脚本，
         # 此过程发生在 networkidle 之后，期间调用 evaluate() 会报
-        # "Cannot find context with specified id"，需统一等待稳定。
-        if _USING_REBROWSER:
-            time.sleep(0.5)  # 给 rebrowser 注入脚本留出稳定窗口（对所有页面生效）
-        title = page.title()
+        # "Cannot find context with specified id"。
+        # 用 _safe_evaluate 取标题，自带指数退避重试，比 sleep 更可靠。
+        try:
+            title = _safe_evaluate(page, "() => document.title")
+        except Exception:
+            title = page.title()  # 降级：直接调用（不经过 evaluate）
         return f"已打开页面: {url}\n标题: {title}"
     except Exception as e:
         log(f"browser | OPEN error: {e}")
@@ -394,8 +437,6 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
     if mode not in ("interactive", "text", "all"):
         mode = "all"
 
-    global _uuid_counter
-    _uuid_counter = 0
     text_lines, interactive_items = _parse_ax_tree(_page)
 
     # 重建 UUID 映射
@@ -434,8 +475,8 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
 
 
 def _refresh_item_map() -> str:
-    """等待页面稳定后重建 UUID 映射，返回简短的状态描述。"""
-    global _item_map, _uuid_counter
+    """等待页面稳定后重建 UUID 映射，返回新增/消失的元素 diff。"""
+    global _item_map
     _maybe_switch_to_new_tab()
     try:
         _page.wait_for_load_state("domcontentloaded", timeout=_timeout_ms())
@@ -445,11 +486,28 @@ def _refresh_item_map() -> str:
         _page.wait_for_load_state("networkidle", timeout=3000)
     except Exception:
         pass
-    _uuid_counter = 0
+    time.sleep(0.3)
+
+    old_map = _item_map
     _, interactive_items = _parse_ax_tree(_page)
-    _item_map = {item['uuid']: item for item in interactive_items}
+    new_map = {item['uuid']: item for item in interactive_items}
+    _item_map = new_map
     log(f"browser | _refresh_item_map → {len(_item_map)} 个可交互元素")
-    return f"（页面已刷新）\n<警告：交互元素ID信息可能已经过期。使用 browser_read 获取最新的交互元素 ID 信息。>"
+
+    added = {uid: item for uid, item in new_map.items() if uid not in old_map}
+    removed = {uid: item for uid, item in old_map.items() if uid not in new_map}
+
+    parts = ["（页面已刷新，可以使用 browser_read 获取最新信息）"]
+    if added:
+        lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in added.items()]
+        parts.append("<新增元素>\n" + "\n".join(lines) + "\n</新增元素>")
+    if removed:
+        lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in removed.items()]
+        parts.append("<消失元素>\n" + "\n".join(lines) + "\n</消失元素>")
+    if not added and not removed:
+        parts.append("（元素无变化）")
+
+    return "\n".join(parts)
 
 
 def browser_click(element_uuid: str) -> str:
@@ -514,7 +572,7 @@ def browser_eval(script: str) -> str:
     if _page is None or _page.is_closed():
         return "浏览器尚未打开任何页面。"
     try:
-        result = _page.evaluate(script)
+        result = _safe_evaluate(_page, script)
         _page.wait_for_load_state("networkidle", timeout=_timeout_ms())
         log(f"browser | EVAL result: {result}")
         base_msg = f"JavaScript 执行结果: {result}"
@@ -565,7 +623,8 @@ def browser_find(text: str, max_results: int = 10) -> str:
     if _page is None or _page.is_closed():
         return "浏览器尚未打开任何页面。"
     try:
-        results = _page.evaluate(
+        results = _safe_evaluate(
+            _page,
             """([needle, limit]) => {
                 const matches = [];
                 const walker = document.createTreeWalker(
@@ -622,25 +681,20 @@ def browser_pdf(save_dir: str = ".") -> str:
         os.makedirs(save_dir, exist_ok=True)
         filename = os.path.join(save_dir, f"page_{int(time.time())}.pdf")
 
-        if _USING_REBROWSER:
-            # 有头模式下 page.pdf() 不可用，改用 CDP Page.printToPDF
-            cdp = _page.context.new_cdp_session(_page)
-            result = cdp.send("Page.printToPDF", {
-                "printBackground": True,
-                "paperWidth": 8.27,   # A4 英寸
-                "paperHeight": 11.69,
-            })
-            cdp.detach()
-            pdf_bytes = base64.b64decode(result["data"])
-            with open(filename, "wb") as f:
-                f.write(pdf_bytes)
-        else:
-            _page.pdf(path=filename, format="A4", print_background=True)
-
+        # 有头模式下 page.pdf() 不可用，改用 CDP Page.printToPDF
+        cdp = _page.context.new_cdp_session(_page)
+        result = cdp.send("Page.printToPDF", {
+            "printBackground": True,
+            "paperWidth": 8.27,   # A4 英寸
+            "paperHeight": 11.69,
+        })
+        cdp.detach()
+        pdf_bytes = base64.b64decode(result["data"])
+        with open(filename, "wb") as f:
+            f.write(pdf_bytes)
         size = os.path.getsize(filename)
         log(f"browser | PDF saved to {filename} ({size} bytes)")
-        user_log(f"Save PDF: {filename} ({size / 1024:.1f} KB)", role='BROWSER')
-        return f"PDF has been saved at: {filename}"
+        return f"PDF has been saved at: {filename} ({size / 1024:.1f} KB)"
     except Exception as e:
         log(f"browser | PDF error: {e}")
         return f"Failed at generating PDF: {e}"
@@ -660,17 +714,8 @@ def browser_wait_for_navigation(timeout: int = None, state: str = "networkidle")
         return f"等待页面加载失败：{e}"
 
 
-SEARCH_ENGINES = {
-    'google': 'https://www.google.com/search?q=',
-    'bing': 'https://www.bing.com/search?q=',
-    'baidu': 'https://www.baidu.com/s?wd=',
-    'duckduckgo': 'https://duckduckgo.com/?q=',
-}
-
-
 def browser_search(query: str, engine: str = 'google') -> str:
     """使用指定搜索引擎搜索关键词。"""
-    from urllib.parse import quote_plus
     engine = engine.lower()
     base_url = SEARCH_ENGINES.get(engine)
     if base_url is None:
@@ -685,10 +730,11 @@ def browser_search(query: str, engine: str = 'google') -> str:
             page.wait_for_load_state("networkidle", timeout=5000)
         except Exception:
             pass  # 超时无妨，继续
-        # 给 rebrowser 注入脚本留出稳定窗口，防止后续 evaluate() 报上下文错误
-        if _USING_REBROWSER:
-            time.sleep(0.5)
-        title = page.title()
+        # 用 _safe_evaluate 取标题，带指数退避重试，比 sleep 更可靠
+        try:
+            title = _safe_evaluate(page, "() => document.title")
+        except Exception:
+            title = page.title()
         return f"已打开页面: {url}\n标题: {title}"
     except Exception as e:
         log(f"browser | SEARCH error: {e}")
@@ -832,7 +878,7 @@ def browser_scroll(direction: str = "down", amount: int = 500,
             )
             label = f"元素 [{element_uuid}] \"{item['name']}\""
         else:
-            _page.evaluate(f"window.scrollBy({delta_x}, {delta_y})")
+            _safe_evaluate(_page, f"window.scrollBy({delta_x}, {delta_y})")
             label = "页面"
 
         log(f"browser | SCROLL {label} {direction} {amount}px")
@@ -916,6 +962,7 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
 
     try:
         os.makedirs(save_dir, exist_ok=True)
+        from config import get_config
         download_timeout_ms = get_config().get('wait_download', 60) * 1000
         with _page.expect_download(timeout=download_timeout_ms) as dl_info:
             handle = _resolve_element(_page, item)
@@ -928,7 +975,6 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
         download.save_as(save_path)
         size = os.path.getsize(save_path)
         log(f"browser | DOWNLOAD {label} → {save_path} ({size} bytes)")
-        user_log(f"Download: {save_path}（{size / 1024:.1f} KB）", role='BROWSER')
         refresh_msg = _refresh_item_map()
         return f"下载完成: {save_path}（{size / 1024:.1f} KB）\n{refresh_msg}"
     except Exception as e:
@@ -953,3 +999,240 @@ def browser_close() -> str:
     except Exception as e:
         log(f"browser | CLOSE error: {e}")
         return f"关闭浏览器时出错：{e}"
+
+
+def is_browser_open() -> bool:
+    """检查浏览器是否已打开且可用。"""
+    global _page, _browser
+    if _page is None or _page.is_closed():
+        return False
+    if _browser is None or not _browser.is_connected():
+        return False
+    return True
+
+
+# ── 工具分发处理器 ─────────────────────────────────────────────────────────
+
+def dispatch(name: str, args: dict, ctx: ToolContext,
+             work_model=None) -> ToolResult:
+    """将 browse_* 工具名分发到对应处理函数。"""
+    _handlers = {
+        'browse_open':               _open,
+        'browse_search':             _search,
+        'browse_read':               _read,
+        'browse_click':              _click,
+        'browse_fill':               _fill,
+        'browse_press':              _press,
+        'browse_find':               _find,
+        'browse_pdf':                _pdf,
+        'browse_eval':               _eval,
+        'browse_wait_for_navigation': _wait_for_navigation,
+        'browse_hover':              _hover,
+        'browse_select':             _select,
+        'browse_get_url':            _get_url,
+        'browse_scroll':             _scroll,
+        'browse_upload':             _upload,
+        'browse_download':           _download,
+        'browse_close':              _close,
+    }
+    handler = _handlers.get(name)
+    if handler is None:
+        return ToolResult(text=f'未知浏览器工具: {name}')
+
+    if name == 'browse_read':
+        return handler(args, ctx, work_model=work_model)
+    return handler(args, ctx)
+
+
+# ── 各操作处理函数 ────────────────────────────────────────────────────────
+
+def _open(args: dict, ctx: ToolContext) -> ToolResult:
+    url = args.get('url', '')
+    return ToolResult(
+        text=browser_open(url),
+        log_msg=f'Open Page: {url}',
+        log_role='BROWSER',
+    )
+
+
+def _search(args: dict, ctx: ToolContext) -> ToolResult:
+    query = args.get('query', '')
+    engine = args.get('engine', 'google')
+    return ToolResult(
+        text=browser_search(query, engine),
+        log_msg=f'Search ({engine}): {query}',
+        log_role='BROWSER',
+    )
+
+
+def _read(args: dict, ctx: ToolContext, work_model=None) -> ToolResult:
+    max_chars = int(args.get('max_chars', 4000))
+    mode = args.get('mode', 'all')
+
+    result = browser_read(max_chars, mode)
+
+    # 构造文件键
+    try:
+        current_url = _page.url if _page and not _page.is_closed() else None
+    except Exception:
+        current_url = None
+    file_key = f'browse_read:{current_url}' if current_url else None
+
+    # 历史去重：与上一次内容对比，未变化则精简提示
+    if work_model and file_key:
+        prev = next(
+            (m['file_contents'][file_key]
+             for m in reversed(work_model._meta)
+             if file_key in m.get('file_contents', {})),
+            None,
+        )
+        if prev is not None and prev == result:
+            url = file_key.removeprefix('browse_read:')
+            result = f'（页面内容没有变化。URL: {url}）'
+            log(f'browse_read | 内容未变化: {url}')
+
+    file_contents = {file_key: result} if file_key else {}
+    return ToolResult(
+        text=result,
+        file_contents=file_contents,
+        log_msg=f'Reading Page ({mode})',
+        log_role='BROWSER',
+    )
+
+
+def _click(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    return ToolResult(
+        text=browser_click(uuid),
+        log_msg=f'Click: [{uuid}]',
+        log_role='BROWSER',
+    )
+
+
+def _fill(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    text = args.get('text', '')
+    return ToolResult(
+        text=browser_fill(uuid, text),
+        log_msg=f'Fill: [{uuid}] → {text!r}',
+        log_role='BROWSER',
+    )
+
+
+def _press(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    key = args.get('key', 'Enter')
+    return ToolResult(
+        text=browser_press(uuid, key),
+        log_msg=f'Press: [{uuid}] {key!r}',
+        log_role='BROWSER',
+    )
+
+
+def _find(args: dict, ctx: ToolContext) -> ToolResult:
+    text = args.get('text', '')
+    max_results = int(args.get('max_results', 10))
+    return ToolResult(
+        text=browser_find(text, max_results),
+        log_msg=f'Page Search: {text!r}',
+        log_role='BROWSER',
+    )
+
+
+def _pdf(args: dict, ctx: ToolContext) -> ToolResult:
+    save_dir = args.get('save_dir') or ctx.cfg['work_dir']
+    result = browser_pdf(save_dir)
+    return ToolResult(
+        text=result,
+        log_msg=f'Save PDF → {save_dir}',
+        log_role='BROWSER',
+    )
+
+
+def _eval(args: dict, ctx: ToolContext) -> ToolResult:
+    script = args.get('script', '')
+    return ToolResult(
+        text=browser_eval(script),
+        log_msg=f'Eval: \n{script}',
+        log_role='BROWSER',
+    )
+
+
+def _wait_for_navigation(args: dict, ctx: ToolContext) -> ToolResult:
+    timeout = args.get('timeout')
+    state = args.get('state', 'networkidle')
+    return ToolResult(
+        text=browser_wait_for_navigation(timeout, state),
+        log_msg=f'Loading ({state})...',
+        log_role='BROWSER',
+    )
+
+
+def _hover(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    return ToolResult(
+        text=browser_hover(uuid),
+        log_msg=f'Hover: [{uuid}]',
+        log_role='BROWSER',
+    )
+
+
+def _select(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    value = args.get('value', '')
+    return ToolResult(
+        text=browser_select(uuid, value),
+        log_msg=f'Choose: [{uuid}] → {value!r}',
+        log_role='BROWSER',
+    )
+
+
+def _get_url(args: dict, ctx: ToolContext) -> ToolResult:
+    return ToolResult(
+        text=browser_get_url(),
+        log_msg='Get current URL',
+        log_role='BROWSER',
+    )
+
+
+def _scroll(args: dict, ctx: ToolContext) -> ToolResult:
+    direction = args.get('direction', 'down')
+    amount = int(args.get('amount', 500))
+    uuid = args.get('element_uuid') or None
+    log_suffix = f'  [{uuid}]' if uuid else ''
+    return ToolResult(
+        text=browser_scroll(direction, amount, uuid),
+        log_msg=f'Roll ({direction} {amount}px){log_suffix}',
+        log_role='BROWSER',
+    )
+
+
+def _upload(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    file_paths = args.get('file_paths', [])
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
+    return ToolResult(
+        text=browser_upload(uuid, file_paths),
+        log_msg=f'Upload File: [{uuid}] ← {file_paths}',
+        log_role='BROWSER',
+    )
+
+
+def _download(args: dict, ctx: ToolContext) -> ToolResult:
+    uuid = args.get('element_uuid', '')
+    save_dir = args.get('save_dir') or ctx.cfg.get('work_dir', '.')
+    result = browser_download(uuid, save_dir)
+    return ToolResult(
+        text=result,
+        log_msg=f'Download File: [{uuid}] → {save_dir}',
+        log_role='BROWSER',
+    )
+
+
+def _close(args: dict, ctx: ToolContext) -> ToolResult:
+    return ToolResult(
+        text=browser_close(),
+        log_msg='Close Browser',
+        log_role='BROWSER',
+    )

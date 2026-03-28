@@ -2,8 +2,15 @@ import json
 import os
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(_HERE, 'config_tmp.json')
-WORKING_CONFIG_FILE = os.path.join(_HERE, 'working_config_tmp.json')
+
+# 优先使用 debug 配置，不存在则回退到默认配置
+_config_debug = os.path.join(_HERE, 'config_debug.json')
+_config_default = os.path.join(_HERE, 'config.json')
+CONFIG_FILE = _config_debug if os.path.exists(_config_debug) else _config_default
+
+_working_config_debug = os.path.join(_HERE, 'working_config_debug.json')
+_working_config_default = os.path.join(_HERE, 'working_config.json')
+WORKING_CONFIG_FILE = _working_config_debug if os.path.exists(_working_config_debug) else _working_config_default
 
 
 # ── 静态配置（config.json）────────────────────────────────────────────────────
@@ -15,6 +22,9 @@ def get_config() -> dict:
     working = _get_working_config()
     # 运行时字段覆盖静态字段（如有同名）
     config.update(working)
+    # work_dir 不存在时使用程序当前目录保底
+    if not config.get('work_dir') or not os.path.exists(config['work_dir']):
+        config['work_dir'] = _HERE
     # 向后兼容：where 为空时回退到 work_dir
     if not config.get('where'):
         config['where'] = config['work_dir']
@@ -27,6 +37,11 @@ def _get_working_config() -> dict:
     """读取运行时配置文件，返回字典。"""
     with open(WORKING_CONFIG_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+
+def get_working_config() -> dict:
+    """公开接口：读取运行时配置文件，返回字典。"""
+    return _get_working_config()
 
 
 def _save_working_config(working: dict):

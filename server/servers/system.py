@@ -1,7 +1,19 @@
+"""
+server/servers/system.py —— 系统工具处理器。
+
+涵盖: finish / system_command / change_directory / ask_user / find_file / edit_file / get_cwd / set_cwd_explicit
+"""
+
+from __future__ import annotations
+
 import os
 import sys
+import threading
+import subprocess
+
 from config import get_config, set_where
-from script.logger import log
+from logger import log
+from server.router import ToolResult, ToolContext
 
 _IS_WINDOWS = sys.platform == 'win32'
 
@@ -24,14 +36,11 @@ def _set_cwd(path: str):
     set_where(path)
 
 
-# 用于分隔命令输出与工作目录的唯一标记
-# 注意：不能含有 CMD 特殊字符（< > | & 等），否则会被 shell 解释
 _CWD_SEPARATOR = '==CWD_MARKER=='
 
 
 def set_cwd_explicit(path: str) -> str:
-    """供 CD 指令显式切换工作目录。"""
-    import os
+    """供 change_directory 工具显式切换工作目录。"""
     full_path = path if os.path.isabs(path) else os.path.join(_get_cwd(), path)
     if os.path.isdir(full_path):
         _set_cwd(full_path)
@@ -40,25 +49,19 @@ def set_cwd_explicit(path: str) -> str:
         return f'目录不存在: {full_path}'
 
 
-def system_command(command: str, inputs: str | list[str] | None = None) -> str:
-    import threading
-    import subprocess
-
+def _system_command_impl(command: str, inputs: str | list[str] | None = None) -> str:
     cwd = _get_cwd()
     log(f'system_command | cwd: {cwd} | command: {command} | inputs: {inputs}')
 
-    # 预处理输入内容
     input_data = None
     if inputs is not None:
         if isinstance(inputs, list):
-            # 将列表合并为换行分隔的字符串，确保最后有一个换行
             input_data = "\n".join(map(str, inputs)) + "\n"
         else:
             input_data = str(inputs)
             if not input_data.endswith('\n'):
                 input_data += '\n'
 
-        # 转换为字节流
         encoding = get_config()['encoding']
         input_data = input_data.encode(encoding)
 
@@ -71,7 +74,6 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
             cwd=cwd,
             env=_env,
         )
-        # start_new_session 在 Windows 上不受支持，改用 CREATE_NEW_PROCESS_GROUP
         if _IS_WINDOWS:
             kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         else:
@@ -85,7 +87,6 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
     stdout_chunks: list[bytes] = []
     stderr_chunks: list[bytes] = []
 
-    # 读取线程逻辑保持不变
     def _read(pipe, chunks):
         try:
             for chunk in iter(lambda: pipe.read(4096), b''):
@@ -103,14 +104,12 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
 
     try:
         if input_data:
-            # 发送输入并等待
             proc.stdin.write(input_data)
-            proc.stdin.close()  # 必须关闭，否则子进程可能一直等待输入
+            proc.stdin.close()
 
         proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         timed_out = True
-        # 跨平台终止进程树
         if _IS_WINDOWS:
             subprocess.run(
                 f'taskkill /F /T /PID {proc.pid}',
@@ -126,22 +125,36 @@ def system_command(command: str, inputs: str | list[str] | None = None) -> str:
     t_out.join(timeout=1)
     t_err.join(timeout=1)
 
-    # 确保关闭所有管道
     if proc.stdout: proc.stdout.close()
     if proc.stderr: proc.stderr.close()
 
     if timed_out:
         return f'命令执行超时（超过 {timeout} 秒）: {command}'
 
-    encoding = get_config()['encoding']
+    cfg = get_config()
+    encoding = cfg['encoding']
+    max_lines: int = cfg.get('max_lines', 200)
+
     stdout_str = b''.join(stdout_chunks).decode(encoding, errors='replace').rstrip('\r\n')
     stderr_str = b''.join(stderr_chunks).decode(encoding, errors='replace').rstrip('\r\n')
 
-    output = stdout_str
-    if stderr_str:
-        output += f'\n[STDERR]: {stderr_str}'
+    def _truncate(text: str) -> str:
+        if not text:
+            return text
+        lines = text.splitlines()
+        if len(lines) > max_lines:
+            omitted = len(lines) - max_lines
+            truncated = lines[:max_lines]
+            truncated.append(f'... （已省略 {omitted} 行，共 {len(lines)} 行）')
+            return '\n'.join(truncated)
+        return '\n'.join(lines)
 
-    return output or '（输出为空）'
+    output = _truncate(stdout_str)
+    if stderr_str:
+        output += f'\n[STDERR]: {_truncate(stderr_str)}'
+
+    return output or '(EMPTY OUTPUT)'
+
 
 def get_cwd() -> str:
     """返回当前持久化工作目录。"""
@@ -160,3 +173,47 @@ def edit_file(filename: str, text: str, encoding: str = 'utf-8'):
     """将 text 覆盖写入指定文件。"""
     with open(filename, 'w', encoding=encoding) as f:
         f.write(text)
+
+
+# ── 工具处理器函数 ─────────────────────────────────────────────────────────
+
+def finish(args: dict, ctx: ToolContext) -> ToolResult:
+    return ToolResult(text='FINISH', is_finish=True)
+
+
+def system_command(args: dict, ctx: ToolContext) -> ToolResult:
+    command = args.get('command', '')
+    inputs = args.get('inputs')
+
+    input_log = f'Shell Input: {command}'
+    if inputs is not None:
+        input_log += f' | input={str(inputs).split()}'
+    input_log += '\n'
+
+    output = _system_command_impl(command, inputs=inputs)
+    output_log = f'Shell Output: {"(NULL)" if output == "" else chr(10) + output}'
+
+    return ToolResult(
+        text=output or '(EMPTY OUTPUT)',
+        log_msg=[(input_log, 'SHELL'), (output_log, 'SHELL')],
+    )
+
+
+def change_directory(args: dict, ctx: ToolContext) -> ToolResult:
+    path = args.get('path', '')
+    result = set_cwd_explicit(path)
+    return ToolResult(
+        text=result,
+        log_msg=f'Switch Directory: {path}',
+    )
+
+
+def ask_user(args: dict, ctx: ToolContext) -> ToolResult:
+    question = args.get('question', '')
+    reply = ctx.input_func('>> ')
+    text = f'用户回复: {reply}' if reply else '用户什么都没回复。'
+    return ToolResult(
+        text=text,
+        log_msg=question,
+        log_role='QUESTION',
+    )

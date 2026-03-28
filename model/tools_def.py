@@ -1,6 +1,7 @@
 from config import *
 
-TOOLS: list[dict] = [
+# ── 基础工具（始终可用）────────────────────────────────────────────────────
+BASE_TOOLS: list[dict] = [
     {
         "type": "function",
         "function": {
@@ -224,7 +225,10 @@ TOOLS: list[dict] = [
             },
         },
     },
-    # ── 浏览器指令 ────────────────────────────────────────────────────────
+]
+
+# ── 浏览器基础工具（始终可用）───────────────────────────────────────────────
+BROWSER_BASE_TOOLS: list[dict] = [
     {
         "type": "function",
         "function": {
@@ -259,6 +263,10 @@ TOOLS: list[dict] = [
             },
         },
     },
+]
+
+# ── 浏览器页面操作工具（仅在浏览器打开后可用）───────────────────────────────
+BROWSER_PAGE_TOOLS: list[dict] = [
     {
         "type": "function",
         "function": {
@@ -586,3 +594,21 @@ TOOLS: list[dict] = [
         },
     },
 ]
+
+# ── 完整工具列表（向后兼容）─────────────────────────────────────────────────
+TOOLS: list[dict] = BASE_TOOLS + BROWSER_BASE_TOOLS + BROWSER_PAGE_TOOLS
+
+
+def get_tools(browser_open: bool = False) -> list[dict]:
+    """根据浏览器状态获取可用的工具列表。
+    
+    Args:
+        browser_open: 浏览器是否已打开
+        
+    Returns:
+        可用的工具列表
+    """
+    tools = BASE_TOOLS + BROWSER_BASE_TOOLS
+    if browser_open:
+        tools = tools + BROWSER_PAGE_TOOLS
+    return tools

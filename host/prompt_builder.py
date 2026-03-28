@@ -1,5 +1,5 @@
 """
-prompt_builder.py —— 系统提示词构建。
+host/prompt_builder.py —— 系统提示词构建。
 
 负责发现可用技能并组装 Momoka 的 system prompt。
 """
@@ -9,14 +9,12 @@ import sys
 
 import config
 from config import get_config
-from script.system import get_cwd
+from server import get_cwd
 
 
 def discover_skills(cfg: dict) -> list[dict]:
     """扫描项目 skills 目录，返回所有合法技能的元数据列表（含 name/description）。"""
     skills_dir = cfg.get('skills_dir', 'skill')
-    # 优先用绝对路径；否则以 config.py 所在的项目根目录为基准，
-    # 而不是 work_dir（work_dir 是用户工作目录，不是项目目录）。
     if os.path.isabs(skills_dir):
         skills_root = skills_dir
     else:
@@ -74,7 +72,7 @@ def build_system_prompt() -> str:
     return (
         f"You are Momoka, a work assistant. Your job is to operate users' computers and complete their requests.\n"
         f"Current location: {get_cwd()}\n"
-        f"Woking directory: {cfg['work_dir']}\n"
+        f"Working directory: {cfg['work_dir']}\n"
         f"OS: {platform_hint}\n"
         + (f"use {config.get_config()['language']} to communicate with user.\n"
         if config.get_config()['language'] is not None and config.get_config()['language'] != ""

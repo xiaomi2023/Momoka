@@ -1,10 +1,7 @@
 {
-  "edit_mode": false,
-  "file_name": "",
   "where": "C:\\Users\\...",
-  "replace_mode": false,
-  "replace_file": "Unknown",
-  "replace_step": 1,
-  "replace_old_text": "",
-  "wait": 10
+  "wait": 10,
+  "wait_download": 60,
+  "read_max_lines": 1000,
+  "read_max_size_kb": 100
 }
