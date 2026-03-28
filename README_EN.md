@@ -69,7 +69,7 @@ After running, enter the following commands in the console to configure the Base
 ```bash
 /set base_url https://api.XXX.com
 /set api_key sk-***
-/set work_dir "C:\\Users\\...",
+/set work_dir "C:\\Users\\..."
 ```
 Enter **/model** to select a model, and send a test message to ensure everything is ready.  
 You can use the **/help** command to get help, or the **/set** command to get more parameter information.
