@@ -69,7 +69,7 @@ python main.py
 ```bash
 /set base_url https://api.XXX.com
 /set api_key sk-***
-/set work_dir "C:\\Users\\...",
+/set work_dir "C:\\Users\\..."
 ```
 输入 **/model** 选择模型，并发送测试信息确保一切就绪。  
 可以通过 **/help** 命令获取帮助，或 **/set** 命令获取更多参数信息。
