@@ -156,8 +156,9 @@ class CLIUser(BaseUser):
         try:
             _con = Console(highlight=False)
             _footer = "\n" + " " * 19 + 'Welcome back! This is Momoka~\n'
+            pink_title = Text(TITLE.strip(), style='pink3')
             _con.print(Panel(
-                TITLE.strip() + '\n' + _footer,
+                pink_title + '\n' + _footer,
                 border_style='bright_cyan', padding=(0, 2), expand=False,
                 subtitle=INFO.strip(), subtitle_align='center',
             ))

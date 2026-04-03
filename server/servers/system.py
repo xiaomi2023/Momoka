@@ -1,7 +1,7 @@
 """
 server/servers/system.py —— 系统工具处理器。
 
-涵盖: finish / system_command / change_directory / ask_user / find_file / edit_file / get_cwd / set_cwd_explicit
+涵盖: finish / system_command / change_directory / find_file / edit_file / get_cwd / set_cwd_explicit
 """
 
 from __future__ import annotations
@@ -208,12 +208,3 @@ def change_directory(args: dict, ctx: ToolContext) -> ToolResult:
     )
 
 
-def ask_user(args: dict, ctx: ToolContext) -> ToolResult:
-    question = args.get('question', '')
-    reply = ctx.input_func('>> ')
-    text = f'用户回复: {reply}' if reply else '用户什么都没回复。'
-    return ToolResult(
-        text=text,
-        log_msg=question,
-        log_role='QUESTION',
-    )

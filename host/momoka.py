@@ -9,6 +9,7 @@ from logger import log
 from model.model import Model
 from server.router import execute_tool_calls
 from host.prompt_builder import build_system_prompt
+from server.tool_registry import get_available_tools
 
 
 class Momoka:
@@ -41,12 +42,17 @@ class Momoka:
                 'round_count': int
         """
         log(f'momoka.send | {message}')
+        
+        # 获取当前可用的工具列表
+        available_tools = get_available_tools()
+        
         response = self._call_wrapper(
             self._model.message,
             message,
             role='user',
             file_contents=file_contents,
             use_tools=True,
+            available_tools=available_tools,
         )
 
         input_tokens = response.get('input_tokens', 0)
@@ -121,7 +127,14 @@ class Momoka:
                 if self._check_interrupt():
                     return False, file_contents, input_tokens, output_tokens, round_count
 
-                response = self._call_wrapper(self._model.resume, use_tools=True)
+                # 获取最新的可用工具列表（浏览器状态可能已改变）
+                available_tools = get_available_tools()
+                
+                response = self._call_wrapper(
+                    self._model.resume, 
+                    use_tools=True,
+                    available_tools=available_tools
+                )
                 input_tokens += response.get('input_tokens', 0)
                 output_tokens += response.get('output_tokens', 0)
                 round_count += 1

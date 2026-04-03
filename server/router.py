@@ -24,6 +24,7 @@ from logger import log
 from server import ToolResult, ToolContext
 from server import servers
 from server.servers import system as system_handler
+from server.servers import ask_user as ask_user_handler
 from server.servers import browser as browser_handler
 
 
@@ -35,7 +36,7 @@ def _execute_tool(name: str, args: dict, ctx: ToolContext,
         case 'finish':           return system_handler.finish(args, ctx)
         case 'system_command':   return system_handler.system_command(args, ctx)
         case 'change_directory': return system_handler.change_directory(args, ctx)
-        case 'ask_user':         return system_handler.ask_user(args, ctx)
+        case 'ask_user':         return ask_user_handler.ask_user(args, ctx)
 
         case 'edit_file':        return servers.office.edit_file(args, ctx)
         case 'replace_file':     return servers.office.replace_file(args, ctx)

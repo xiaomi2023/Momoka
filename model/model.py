@@ -8,7 +8,6 @@ model/model.py —— 模型调用层。
 from config import get_config
 from logger import log, chat_log
 from model.context import Context
-from model.tools_def import get_tools
 
 from openai import OpenAI
 from openai import (
@@ -19,6 +18,7 @@ from openai import (
     RateLimitError,
     APIStatusError,
 )
+
 
 def _openai_call(fn, user=None, *args, **kwargs):
     """统一执行 OpenAI SDK 调用，捕获常见错误并通过 user_log 告知用户。
@@ -101,8 +101,16 @@ class Model:
 
     def message(self, message: str, role: str = 'user',
                 file_contents: dict[str, str] | None = None,
-                use_tools: bool = False) -> dict:
+                use_tools: bool = False,
+                available_tools: list[dict] | None = None) -> dict:
         """向模型发送消息，返回响应字典。
+
+        Args:
+            message: 用户消息内容
+            role: 消息角色，默认为 'user'
+            file_contents: 文件内容字典
+            use_tools: 是否使用工具
+            available_tools: 可用工具列表，由 Host 层提供
 
         Returns:
             dict，包含 content / tool_calls / input_tokens / output_tokens / interrupted
@@ -110,11 +118,6 @@ class Model:
         cfg = get_config()
         log_prefix = f'chat with {cfg["model"]} ({cfg["base_url"]}) as {self.name}'
         log(f'{log_prefix} | input: {message}')
-
-        # 检查浏览器状态以确定可用工具
-        from server.servers.browser import is_browser_open
-        browser_open = is_browser_open()
-        available_tools = get_tools(browser_open=browser_open) if use_tools else []
 
         kwargs: dict = dict(
             model=cfg['model'],
@@ -155,16 +158,20 @@ class Model:
             'output_tokens': response.usage.completion_tokens if response.usage else 0,
         }
 
-    def resume(self, use_tools: bool = True) -> dict:
-        """工具执行完毕后，直接用当前历史继续推理，不插入任何 user 消息。"""
+    def resume(self, use_tools: bool = True,
+               available_tools: list[dict] | None = None) -> dict:
+        """工具执行完毕后，直接用当前历史继续推理，不插入任何 user 消息。
+
+        Args:
+            use_tools: 是否使用工具
+            available_tools: 可用工具列表，由 Host 层提供
+
+        Returns:
+            dict，包含 content / tool_calls / input_tokens / output_tokens
+        """
         cfg = get_config()
         log_prefix = f'chat with {cfg["model"]} ({cfg["base_url"]}) as {self.name}'
         log(f'{log_prefix} | resume')
-
-        # 检查浏览器状态以确定可用工具
-        from server.servers.browser import is_browser_open
-        browser_open = is_browser_open()
-        available_tools = get_tools(browser_open=browser_open) if use_tools else []
 
         kwargs: dict = dict(model=cfg['model'], messages=self._ctx.history, stream=False)
         if use_tools and available_tools:
@@ -213,4 +220,3 @@ def chat(question: str, role: str = 'user') -> str:
     """快捷函数：创建一次性 Model 并发送单条消息（不使用 tools）。"""
     result = Model().message(question, role, use_tools=False)
     return result['content']
-
