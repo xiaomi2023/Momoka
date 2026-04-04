@@ -1,8 +1,18 @@
-## Guide
+# Momoka Document
 
-**Momoka** is a locally running AI Agent assistant. Write code, organize documents, browse the web... everything with just a single line of request.  
-You can get more information from the following:  
-- [Introduction and Quick Start](../README_EN.md)
-- [Configuration](config.md)
+<p align="center">
+  <img src="assets/images/logo.png" alt="Momoka Logo" width="300">
+</p>
+
+<p align="center">
+  <strong>"ふふ、待ってたよ~"</strong>
+</p>
+
+---
+
+**Momoka** is a locally running AI Agent assistant. Write code, organize documents, browse the web... everything with just a single line of request.
+
+- [Quick Start](quick_start.md)
+- [Configuration](configuration.md)
 - [Headless Mode (BETA)](headless.md)
 - [Momoka Server (BETA)](momoka_server.md)

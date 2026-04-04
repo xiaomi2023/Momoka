@@ -1,0 +1,110 @@
+# MkDocs 配置文件
+# 文档: https://www.mkdocs.org/user-guide/configuration/
+
+site_name: Momoka
+site_description: Momoka Documentation
+site_author: Mikoris
+site_url: https://xiaomi2023.github.io/Momoka/
+
+# 仓库链接
+repo_name: Momoka
+repo_url: https://github.com/xiaomi2023/Momoka
+edit_uri: edit/main/docs/
+
+# 版权信息
+copyright: Copyright &copy; 2026 Mikoris
+
+# 主题配置
+theme:
+  name: material
+  language: en
+
+  # 图标设置（禁用默认 favicon）
+  favicon: null
+  icon:
+    logo: null
+
+  # 配色方案
+  palette:
+    # 亮色模式
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # 暗色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  # 字体
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  # 功能特性
+  features:
+    - navigation.tabs           # 顶部导航标签
+    - navigation.sections       # 章节导航
+    - navigation.expand         # 默认展开导航
+    - navigation.top            # 返回顶部按钮
+    - search.suggest            # 搜索建议
+    - search.highlight          # 搜索结果高亮
+    - content.tabs.link         # 标签页链接
+    - content.code.annotation   # 代码注释
+    - content.code.copy         # 代码复制按钮
+
+# 插件
+plugins:
+  - search:
+      lang: 
+        - zh
+        - en
+
+# 扩展
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+# 额外 CSS
+extra_css:
+  - stylesheets/extra.css
+
+# 导航菜单
+nav:
+  - Home: index.md
+  - Quick Start: quick_start.md
+  - Configuration: configuration.md
+  - Headless Mode: headless.md
+  - Momoka Server: momoka_server.md
+
+# 额外配置
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/xiaomi2023/Momoka
+  version:
+    provider: mike

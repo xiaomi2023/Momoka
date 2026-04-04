@@ -13,7 +13,7 @@ it enables Momoka to connect and interact with external services.
 - [3. Creating Custom Server Modules](#3-creating-custom-server-modules)
   - [Writing Tool Definitions (tooldef.py)](#writing-tool-definitions-tooldefpy)
   - [Writing Tool Handlers (handler.py)](#writing-tool-handlers-handlerpy)
-  - [Exporting Module Interface (__init__.py)](#exporting-module-interface-__init__py)
+  - [Exporting Module Interface (__init__.py)](#exporting-module-interface-initpy)
 - [4. Registering Custom Servers](#4-registering-custom-servers)
   - [4.1 Registering in tool_registry.py](#41-registering-in-tool_registrypy)
   - [4.2 Adding Routes in router.py](#42-adding-routes-in-routerpy)
@@ -142,7 +142,7 @@ def get_weather(args: dict, ctx: ToolContext) -> ToolResult:
     )
 ```
 
-### Exporting Module Interface (__init__.py)
+### Exporting Module Interface initpy
 
 `__init__.py` exports the public interface of the module:
 
