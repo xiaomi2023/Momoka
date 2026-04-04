@@ -1,7 +1,7 @@
 ## Guide
 
 <div align="center">
-  <img src="image/logo.png" alt="Momoka Logo" width="400">
+  <img src="../image/logo.png" alt="Momoka Logo" width="400">
   <h1>Momoka v0.2</h1>
   <p>"ふふ、待ってたよ~"</p>
 </div>
