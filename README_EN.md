@@ -80,10 +80,7 @@ Configure Skills by adding Skill folders containing **SKILL.md** and optional re
 For more information, please refer to [here](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/).
 
 ## More Information
-- [Guide](docs/index.md)
-  - [Configuration](config.md)
-  - [Headless Mode (BETA)](headless.md)
-  - [Momoka Server (BETA)](momoka_server.md)
+[Documentation](https://xiaomi2023.github.io/Momoka/)
 
 ## 📄 License
 This repository is licensed under the [Apache License 2.0](LICENSE).
