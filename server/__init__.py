@@ -44,7 +44,7 @@ class ToolContext:
 # 在类定义之后导入，避免循环导入
 
 from server.router import execute_tool_calls, _execute_tool
-from server.servers.system import _system_command_impl as system_command, find_file, edit_file, get_cwd, set_cwd_explicit
+from server.servers.system.system import _system_command_impl as system_command, find_file, edit_file, get_cwd, set_cwd_explicit
 
 __all__ = [
     'execute_tool_calls', '_execute_tool', 'ToolResult', 'ToolContext',

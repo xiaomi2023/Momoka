@@ -8,11 +8,11 @@ server/router.py —— 工具调用调度路由。
   4. 管理文件折叠与 finish 后的全量折叠
 
 具体执行实现分布在：
-  server/servers/settings.py  —— set_wait / set_read_limits
-  server/servers/skill.py     —— get_skill
-  server/servers/office.py    —— read_file / edit_file / replace_file / read_sheet
-  server/servers/system.py    —— system_command / change_directory / ask_user / finish
-  server/servers/browser.py   —— 所有 browse_* 工具
+  server/servers/settings/settings.py  —— set_wait / set_read_limits
+  server/servers/skill/skill.py        —— get_skill
+  server/servers/system/system.py      —— system_command / change_directory / ask_user / finish
+                                         read_file / edit_file / replace_file / read_sheet
+  server/servers/browser/browser.py    —— 所有 browse_* 工具
 """
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ import json
 from config import get_config
 from logger import log
 from server import ToolResult, ToolContext
-from server import servers
 from server.servers import system as system_handler
-from server.servers import ask_user as ask_user_handler
+from server.servers import user as user_handler
 from server.servers import browser as browser_handler
+from server.servers import settings, skill
 
 
 # ── 路由 ──────────────────────────────────────────────────────────────────
@@ -36,17 +36,19 @@ def _execute_tool(name: str, args: dict, ctx: ToolContext,
         case 'finish':           return system_handler.finish(args, ctx)
         case 'system_command':   return system_handler.system_command(args, ctx)
         case 'change_directory': return system_handler.change_directory(args, ctx)
-        case 'ask_user':         return ask_user_handler.ask_user(args, ctx)
+        case 'ask_user':         return user_handler.ask_user(args, ctx)
+        case 'set_todolist':     return user_handler.set_todolist(args, ctx)
+        case 'ask_option':       return user_handler.ask_option(args, ctx)
 
-        case 'edit_file':        return servers.office.edit_file(args, ctx)
-        case 'replace_file':     return servers.office.replace_file(args, ctx)
-        case 'read_file':        return servers.office.read_file(args, ctx)
-        case 'read_sheet':       return servers.office.read_sheet(args, ctx)
+        case 'edit_file':        return system_handler.edit_file_tool(args, ctx)
+        case 'replace_file':     return system_handler.replace_file(args, ctx)
+        case 'read_file':        return system_handler.read_file(args, ctx)
+        case 'read_sheet':       return system_handler.read_sheet(args, ctx)
 
-        case 'get_skill':        return servers.skill.get_skill(args, ctx)
+        case 'get_skill':        return skill.get_skill(args, ctx)
 
-        case 'set_wait':         return servers.settings.set_wait(args, ctx)
-        case 'set_read_limits':  return servers.settings.set_read_limits(args, ctx)
+        case 'set_wait':         return settings.set_wait(args, ctx)
+        case 'set_read_limits':  return settings.set_read_limits(args, ctx)
 
         case _ if name.startswith('browse_'):
             return browser_handler.dispatch(name, args, ctx, work_model=work_model)

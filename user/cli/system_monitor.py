@@ -1,5 +1,5 @@
 """
-user/cli_system_monitor.py —— 系统配置变更监控。
+user/cli/system_monitor.py —— 系统配置变更监控。
 
 监控 Windows 注册表、Linux 和 macOS 系统配置的变更，
 当检测到变更时向用户发送 WARN 提示。

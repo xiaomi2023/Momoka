@@ -16,8 +16,8 @@ from rich.text import Text
 
 from logger import log, new_log
 from user.user import BaseUser
-from user.cli_util import handle_slash, multiline_input
-from user.cli_system_monitor import SystemConfigMonitor
+from user.cli.util import handle_slash, multiline_input
+from user.cli.system_monitor import SystemConfigMonitor
 
 _spinner_console = Console(highlight=False)
 
@@ -30,6 +30,7 @@ _ROLE_COLORS: dict[str, str] = {
     'ERROR':    'bright_red',
     'SETTINGS': 'bright_yellow',
     'TOOL':     'bright_cyan',
+    'QUESTION': 'bright_cyan',
 }
 
 TITLE = r"""
@@ -212,10 +213,10 @@ class CLIUser(BaseUser):
             if handled and skill_name is None:
                 continue
 
-            # 修复历史中可能残留的孤儿 tool_calls 消息
+            # Repair orphaned tool_calls messages in history
             repaired = self._agent.repair_history()
             if repaired:
-                log(f'main | repair_history: 补全了 {repaired} 个孤儿 tool_result')
+                log(f'main | repair_history: filled in {repaired} orphaned tool_results')
 
             if handled and skill_name is not None:
                 # /skill_name 强制加载 skill

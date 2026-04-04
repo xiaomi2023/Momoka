@@ -35,25 +35,25 @@ def _openai_call(fn, user=None, *args, **kwargs):
         return fn(*args, **kwargs)
     except AuthenticationError as e:
         if user:
-            user.user_log(f'Authentication failed: API Key is invalid or expired. ({e})', role='ERROR')
+            user.user_log(f'\nAuthentication failed: API Key is invalid or expired. ({e})', role='ERROR')
     except PermissionDeniedError as e:
         if user:
-            user.user_log(f'Permission denied: This API Key does not have access to the specified model or endpoint. ({e})', role='ERROR')
+            user.user_log(f'\nPermission denied: This API Key does not have access to the specified model or endpoint. ({e})', role='ERROR')
     except RateLimitError as e:
         if user:
-            user.user_log(f'Rate limit exceeded: Too many requests or quota exhausted, please try again later. ({e})', role='ERROR')
+            user.user_log(f'\nRate limit exceeded: Too many requests or quota exhausted, please try again later. ({e})', role='ERROR')
     except APITimeoutError as e:
         if user:
-            user.user_log(f'Request timed out: The server did not respond in time, please check your network or try again later. ({e})', role='ERROR')
+            user.user_log(f'\nRequest timed out: The server did not respond in time, please check your network or try again later. ({e})', role='ERROR')
     except APIConnectionError as e:
         if user:
-            user.user_log(f'Connection failed: Unable to reach the API service, please check your network or base_url configuration. ({e})', role='ERROR')
+            user.user_log(f'\nConnection failed: Unable to reach the API service, please check your network or base_url configuration. ({e})', role='ERROR')
     except APIStatusError as e:
         if user:
             user.user_log(f'\nAPI error {e.status_code}: {e.message}', role='ERROR')
     except Exception as e:
         if user:
-            user.user_log(f'Unknown error: {type(e).__name__}: {e}', role='ERROR')
+            user.user_log(f'\nUnknown error: {type(e).__name__}: {e}', role='ERROR')
     return None
 
 

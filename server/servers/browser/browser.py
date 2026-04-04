@@ -1,5 +1,5 @@
 """
-server/servers/browser.py —— 浏览器工具处理器。
+server/servers/browser/handler.py —— 浏览器工具处理器。
 
 所有 browse_* 工具统一由 dispatch() 入口分发，
 browse_read 的历史去重逻辑在此处处理（需要 work_model，由 router 传入）。
@@ -86,7 +86,7 @@ def _timeout_ms() -> int:
 
 
 def _make_uid(role: str, locator_name: str, index: int, seen: set) -> str:
-    """基于 role + locator_name + index 生成稳定的 6 位 16 进制 ID，碰撞时加后缀。"""
+    """基于 role + locator_name + index.md 生成稳定的 6 位 16 进制 ID，碰撞时加后缀。"""
     raw = hashlib.md5(f"{role}|{locator_name}|{index}".encode()).hexdigest()[:6]
     uid = raw
     while uid in seen:
@@ -159,7 +159,7 @@ def _ensure_browser(headless: bool = True) -> "Page":
                 _pw = sync_playwright().start()
             _browser = _pw.chromium.launch(headless=headless, args=_LAUNCH_ARGS)
         _page = _browser.new_page(user_agent=_USER_AGENT)
-        log("browser | 新建浏览器页面 [rebrowser-playwright]")
+        log("browser | New browser page created [rebrowser-playwright]")
 
     return _page
 
@@ -223,7 +223,7 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
                         if not locator_name:
                             locator_name = (el.get_attribute('title') or '').strip()
                         current_val = (el.input_value(timeout=500) or '').strip()
-                        name = f'[已填充: {current_val}]' if current_val else locator_name
+                        name = f'[Fill: {current_val}]' if current_val else locator_name
                     else:
                         locator_name = (el.inner_text(timeout=500) or '').strip()
                         if not locator_name:
@@ -293,7 +293,7 @@ def _resolve_element(page: "Page", item: dict) -> Optional[object]:
                 handle = locator.nth(i).element_handle(timeout=1000)
                 if handle and handle.is_visible():
                     if i != idx:
-                        log(f"browser | _resolve_element 跳过不可见 nth({idx})，改用 nth({i})")
+                        log(f"browser | _resolve_element skipped invisible nth({idx}), using nth({i})")
                     return handle
             except Exception:
                 continue
@@ -367,9 +367,9 @@ def _maybe_switch_to_new_tab():
                 old_url = _page.url
                 _page = latest
                 _page.bring_to_front()
-                log(f"browser | 检测到新标签页，自动切换: {old_url} → {_page.url}")
+                log(f"browser | New tab detected, auto-switched: {old_url} → {_page.url}")
     except Exception as e:
-        log(f"browser | 新标签页检测失败: {e}")
+        log(f"browser | New tab detection failed: {e}")
 
 
 # ── 辅助：标签页列表 ─────────────────────────────────────────────────────
@@ -381,13 +381,13 @@ def _get_tabs_info() -> str:
             return ""
         lines = []
         for i, p in enumerate(pages):
-            marker = " ◀ 当前" if p == _page else ""
+            marker = " ◀ Current" if p == _page else ""
             try:
-                title = p.title() or "(无标题)"
+                title = p.title() or "(Untitled)"
             except Exception:
-                title = "(无法获取)"
+                title = "(unavailable)"
             lines.append(f"  [{i}] {title}  {p.url}{marker}")
-        return "<标签页列表>\n" + "\n".join(lines) + "\n</标签页列表>"
+        return "<Tab list>\n" + "\n".join(lines) + "\n</Tab list>"
     except Exception:
         return ""
 
@@ -413,10 +413,10 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
             title = _safe_evaluate(page, "() => document.title")
         except Exception:
             title = page.title()  # 降级：直接调用（不经过 evaluate）
-        return f"已打开页面: {url}\n标题: {title}"
+        return f"Open: {url}\nTitle: {title}"
     except Exception as e:
         log(f"browser | OPEN error: {e}")
-        return f"打开页面失败: {e}"
+        return f"<Failed to open Page: {e}>"
 
 
 def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
@@ -429,7 +429,7 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
     """
     global _page, _item_map
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面，请先使用 BROWSE_OPEN。"
+        return "<The browser has not been opened yet>"
 
     # 检测新标签页
     _maybe_switch_to_new_tab()
@@ -442,7 +442,7 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
     # 重建 UUID 映射
     _item_map = {item['uuid']: item for item in interactive_items}
 
-    header = f"<当前页面: {_page.url}>\n<读取模式: {mode}>\n"
+    header = f"<Current: {_page.url}>\n<Read mode: {mode}>\n"
     tabs_info = _get_tabs_info()
     if tabs_info:
         header += tabs_info + "\n"
@@ -454,21 +454,22 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
         body = "\n".join(line for line in text_lines if line.strip())
         if len(body) > max_chars:
             body = (body[:max_chars] +
-                    f"\n…（正文已截断，共 {len(body)} 字符。可增大 max_chars 参数读取更多）")
+                    f"\n...(Truncated, totaling {len(body)} characters)"
+                    f"<The max_chars parameter can be increased to read more>")
         if body:
-            sections.append("<正文>\n" + body + "\n</正文>")
+            sections.append("<Text>\n" + body + "\n</Text>")
 
     # 可交互元素部分
     if mode in ("interactive", "all"):
         if interactive_items:
-            lines = ["<可交互元素>"]
+            lines = ["<Interactive Items>"]
             for item in interactive_items:
-                vis = '' if item.get('visible', True) else '  (隐藏)'
+                vis = '' if item.get('visible', True) else '  (hidden)'
                 lines.append(f"  [{item['uuid']}] {item['role']:<12}  {item['name']}{vis}")
-            lines.append("</可交互元素>")
+            lines.append("</Interactive Items>")
             sections.append("\n".join(lines))
         elif mode == "interactive":
-            sections.append("<可交互元素>（当前页面未检测到可交互元素）</可交互元素>")
+            sections.append("<Interactive Items>(NULL)</Interactive Items>")
 
     log(f"browser | READ mode={mode} text_lines={len(text_lines)} interactive={len(interactive_items)}")
     return header + "\n".join(sections)
@@ -492,20 +493,20 @@ def _refresh_item_map() -> str:
     _, interactive_items = _parse_ax_tree(_page)
     new_map = {item['uuid']: item for item in interactive_items}
     _item_map = new_map
-    log(f"browser | _refresh_item_map → {len(_item_map)} 个可交互元素")
+    log(f"browser | _refresh_item_map → {len(_item_map)} interactive elements")
 
     added = {uid: item for uid, item in new_map.items() if uid not in old_map}
     removed = {uid: item for uid, item in old_map.items() if uid not in new_map}
 
-    parts = ["（页面已刷新，可以使用 browser_read 获取最新信息）"]
+    parts = ["<The page has been refreshed. Consider using browser_read to get the latest information>"]
     if added:
         lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in added.items()]
-        parts.append("<新增元素>\n" + "\n".join(lines) + "\n</新增元素>")
+        parts.append("<New Items>\n" + "\n".join(lines) + "\n</New Items>")
     if removed:
         lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in removed.items()]
-        parts.append("<消失元素>\n" + "\n".join(lines) + "\n</消失元素>")
+        parts.append("<Missing Items>\n" + "\n".join(lines) + "\n</Missing Items>")
     if not added and not removed:
-        parts.append("（元素无变化）")
+        parts.append("<Item list has not changed>")
 
     return "\n".join(parts)
 
@@ -513,78 +514,78 @@ def _refresh_item_map() -> str:
 def browser_click(element_uuid: str) -> str:
     """点击指定 UUID 对应的可交互元素。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"点击失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '<The Mapping is empty, consider calling browse_read first>'
+        return f"<Failed to Click: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(_page, item)
     if handle is None:
-        return f"点击失败: 无法定位元素 {label}"
+        return f"<Failed to Click: Cannot locate element {label}>"
 
     try:
         handle.click(timeout=_timeout_ms())
         log(f"browser | CLICK {label}")
         refresh_msg = _refresh_item_map()
-        return f"已点击元素: {label}\n{refresh_msg}"
+        return f"<Clicked: {label}\n{refresh_msg}>"
     except Exception as e:
         log(f"browser | CLICK error {label}: {e}")
-        return f"点击失败 {label}: {e}"
+        return f"<Failed to Click {label}: {e}>"
 
 
 def browser_fill(element_uuid: str, text: str) -> str:
     """向指定 UUID 对应的 textbox / searchbox / combobox 填充文字。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"填充失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '<The Mapping is empty, consider calling browse_read first>'
+        return f"<Failed to Fill: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     role = item['role']
     label = f"[{element_uuid}] {role} \"{item['name']}\""
 
     _fillable = {'textbox', 'searchbox', 'combobox', 'spinbutton'}
     if role not in _fillable:
-        return (f"填充失败: 元素 {label} 类型为 {role!r}，不支持文字填充。"
-                f"可填充类型: {', '.join(sorted(_fillable))}")
+        return (f"<Failed to Fill: Element {label} type is {role!r}. Text fill not supported>"
+                f"<Supported types: {', '.join(sorted(_fillable))}>")
 
     handle = _resolve_element(_page, item)
     if handle is None:
-        return f"填充失败: 无法定位元素 {label}"
+        return f"<Failed to Fill: Cannot locate element {label}>"
 
     try:
         handle.fill(text, timeout=_timeout_ms())
         log(f"browser | FILL {label} → {text!r}")
         refresh_msg = _refresh_item_map()
-        return f"已填充元素 {label}，内容: {text!r}\n{refresh_msg}"
+        return f"<Filled element {label} with: {text!r}>\n{refresh_msg}"
     except Exception as e:
         log(f"browser | FILL error {label}: {e}")
-        return f"填充失败 {label}: {e}"
+        return f"<Failed to Fill {label}: {e}>"
 
 
 def browser_eval(script: str) -> str:
     """在当前页面执行 JavaScript，返回结果字符串。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
     try:
         result = _safe_evaluate(_page, script)
         _page.wait_for_load_state("networkidle", timeout=_timeout_ms())
         log(f"browser | EVAL result: {result}")
-        base_msg = f"JavaScript 执行结果: {result}"
+        base_msg = f"JavaScript execution result: {result}"
         async_keywords = ['setTimeout', 'setInterval', 'Promise', 'async', 'await']
         if any(k in script for k in async_keywords):
-            base_msg += "\n<警告: 检测到可能包含异步操作，结果可能不完整。>"
+            base_msg += "\n<Warning: Possible async operations detected, result may be incomplete>"
         return base_msg
     except Exception as e:
         log(f"browser | EVAL error: {e}")
-        err_msg = f"JavaScript 执行失败: {e}"
+        err_msg = f"JavaScript execution failed: {e}"
         if "return" in script:
-            err_msg += "\n<提示: 顶层不能有 return 语句。多步逻辑请用 IIFE: (() => { ...; return result; })()>"
+            err_msg += "\n<Tip: Top-level return is not allowed. Use IIFE for multi-step logic: (() => { ...; return result; })()>"
         return err_msg
 
 
@@ -596,32 +597,32 @@ def browser_press(element_uuid: str, key: str) -> str:
     常用 key 值: Enter, Tab, Escape, ArrowDown, ArrowUp, Backspace
     """
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"按键失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        return f"<Failed to Press: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(_page, item)
     if handle is None:
-        return f"按键失败: 无法定位元素 {label}"
+        return f"<Failed to Press: Cannot locate element {label}>"
 
     try:
         handle.press(key, timeout=_timeout_ms())
         log(f"browser | PRESS {label} key={key!r}")
         refresh_msg = _refresh_item_map()
-        return f"已向元素 {label} 发送按键: {key!r}\n{refresh_msg}"
+        return f"<Pressed key {key!r} on element {label}>\n{refresh_msg}"
     except Exception as e:
         log(f"browser | PRESS error {label}: {e}")
-        return f"按键失败 {label}: {e}"
+        return f"<Failed to Press {label}: {e}>"
 
 
 def browser_find(text: str, max_results: int = 10) -> str:
     """在当前页面中搜索包含指定文字的可见元素。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
     try:
         results = _safe_evaluate(
             _page,
@@ -647,25 +648,25 @@ def browser_find(text: str, max_results: int = 10) -> str:
             [text, max_results],
         )
         if not results:
-            return f"在当前页面中未找到包含 {text!r} 的可见元素。"
-        lines = [f"在页面中找到 {len(results)} 处包含 {text!r} 的元素:"]
+            return f"<No visible elements containing {text!r} found on current page>"
+        lines = [f"<Found {len(results)} elements containing {text!r} on the page:>"]
         for i, r in enumerate(results, 1):
             matched_uuid = next(
                 (uid for uid, item in _item_map.items() if text in item['name']),
                 None
             )
             uuid_hint = (f"  → UUID: {matched_uuid}" if matched_uuid
-                         else "  → 无对应ID，请调用 browse_read 后再交互")
+                         else "  → No corresponding ID, consider calling browse_read before interacting")
             lines.append(
-                f"  [{i}] <{r['tag']}> 选择器: {r['selector']}\n"
-                f"      文字: {r['snippet']}\n"
+                f"  [{i}] <{r['tag']}> Selector: {r['selector']}\n"
+                f"      Text: {r['snippet']}\n"
                 f"{uuid_hint}"
             )
         log(f"browser | FIND {text!r} → {len(results)} results")
         return "\n".join(lines)
     except Exception as e:
         log(f"browser | FIND error: {e}")
-        return f"页面搜索失败: {e}"
+        return f"<Page search failed: {e}>"
 
 
 def browser_pdf(save_dir: str = ".") -> str:
@@ -675,7 +676,7 @@ def browser_pdf(save_dir: str = ".") -> str:
     有头模式（rebrowser）：通过 CDP Page.printToPDF 命令实现，效果等同。
     """
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
     try:
         import base64
         os.makedirs(save_dir, exist_ok=True)
@@ -703,15 +704,15 @@ def browser_pdf(save_dir: str = ".") -> str:
 def browser_wait_for_navigation(timeout: int = None, state: str = "networkidle") -> str:
     """等待页面导航完成。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
     try:
         timeout_ms = (timeout if timeout is not None else (_timeout_ms() // 1000)) * 1000
         _page.wait_for_load_state(state, timeout=timeout_ms)
         log(f"browser | WAIT completed: state={state}")
-        return f"页面加载完成（状态：{state}）"
+        return f"<Page load completed (state: {state})>"
     except Exception as e:
         log(f"browser | WAIT error: {e}")
-        return f"等待页面加载失败：{e}"
+        return f"<Failed to wait for page load: {e}>"
 
 
 def browser_search(query: str, engine: str = 'google') -> str:
@@ -719,7 +720,7 @@ def browser_search(query: str, engine: str = 'google') -> str:
     engine = engine.lower()
     base_url = SEARCH_ENGINES.get(engine)
     if base_url is None:
-        return f"不支持的搜索引擎: {engine!r}。支持: {', '.join(SEARCH_ENGINES)}"
+        return f"<Unsupported search engine: {engine!r}. Supported: {', '.join(SEARCH_ENGINES)}>"
     url = base_url + quote_plus(query)
     log(f"browser | SEARCH [{engine}] {query!r} → {url}")
     page = _ensure_browser()
@@ -735,10 +736,10 @@ def browser_search(query: str, engine: str = 'google') -> str:
             title = _safe_evaluate(page, "() => document.title")
         except Exception:
             title = page.title()
-        return f"已打开页面: {url}\n标题: {title}"
+        return f"<Opened page: {url}\nTitle: {title}>"
     except Exception as e:
         log(f"browser | SEARCH error: {e}")
-        return f"搜索失败: {e}"
+        return f"<Search failed: {e}>"
 
 
 def browser_switch(index: int) -> str:
@@ -747,66 +748,66 @@ def browser_switch(index: int) -> str:
     try:
         pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
         if not pages:
-            return "当前没有打开的标签页。"
+            return "<No tabs currently open>"
         if index < 0 or index >= len(pages):
-            return f"编号 {index} 超出范围，当前共 {len(pages)} 个标签页（0 ~ {len(pages)-1}）。"
+            return f"<Index {index} out of range, currently {len(pages)} tabs open (0 ~ {len(pages)-1})>"
         _page = pages[index]
         _page.bring_to_front()
         log(f"browser | SWITCH → [{index}] {_page.url}")
-        return f"已切换到标签页 [{index}]: {_page.title()}  {_page.url}"
+        return f"<Switched to tab [{index}]: {_page.title()}  {_page.url}>"
     except Exception as e:
         log(f"browser | SWITCH error: {e}")
-        return f"切换标签页失败: {e}"
+        return f"<Failed to switch tab: {e}>"
 
 
 def browser_hover(element_uuid: str) -> str:
     """将鼠标悬停在指定 UUID 对应的元素上，触发 hover 事件（如展开下拉菜单）。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"悬停失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        return f"<Failed to Hover: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(_page, item)
     if handle is None:
-        return f"悬停失败: 无法定位元素 {label}"
+        return f"<Failed to Hover: Cannot locate element {label}>"
 
     try:
         handle.hover(timeout=_timeout_ms())
         log(f"browser | HOVER {label}")
         refresh_msg = _refresh_item_map()
-        return f"已悬停在元素: {label}\n{refresh_msg}"
+        return f"<Hovered over element: {label}>\n{refresh_msg}"
     except Exception as e:
         log(f"browser | HOVER error {label}: {e}")
-        return f"悬停失败 {label}: {e}"
+        return f"<Failed to Hover {label}: {e}>"
 
 
 def browser_select(element_uuid: str, value: str) -> str:
     """在指定 UUID 对应的 <select> 下拉框中选择选项。
 
-    value 可以是选项的 value 属性、label 文字，或 index（如 "0"、"1"）。
+    value 可以是选项的 value 属性、label 文字，或 index.md（如 "0"、"1"）。
     """
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"选择失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        return f"<Failed to Select: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(_page, item)
     if handle is None:
-        return f"选择失败: 无法定位元素 {label}"
+        return f"<Failed to Select: Cannot locate element {label}>"
 
     try:
-        # 尝试按 value、label、index 依次匹配
+        # 尝试按 value、label、index.md 依次匹配
         select_args: dict = {}
         if value.isdigit():
-            select_args['index'] = int(value)
+            select_args['index.md'] = int(value)
         else:
             select_args['label'] = value  # Playwright 会自动 fallback 到 value
 
@@ -814,31 +815,31 @@ def browser_select(element_uuid: str, value: str) -> str:
                                         timeout=_timeout_ms())
         log(f"browser | SELECT {label} → {selected}")
         refresh_msg = _refresh_item_map()
-        return f"已在 {label} 中选择: {selected}\n{refresh_msg}"
+        return f"<Selected in {label}: {selected}>\n{refresh_msg}"
     except Exception:
-        # index 匹配失败时回退到按 value 精确匹配
+        # index.md 匹配失败时回退到按 value 精确匹配
         try:
             selected = handle.select_option(value=value, timeout=_timeout_ms())
             log(f"browser | SELECT (value fallback) {label} → {selected}")
             refresh_msg = _refresh_item_map()
-            return f"已在 {label} 中选择: {selected}\n{refresh_msg}"
+            return f"<Selected in {label}: {selected}>\n{refresh_msg}"
         except Exception as e:
             log(f"browser | SELECT error {label}: {e}")
-            return f"选择失败 {label}: {e}"
+        return f"<Failed to Select {label}: {e}>"
 
 
 def browser_get_url() -> str:
     """返回当前页面的 URL 和标题，用于快速确认页面状态而无需完整读取内容。"""
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
     try:
         url = _page.url
-        title = _page.title() or "(无标题)"
+        title = _page.title() or "(No title)"
         log(f"browser | GET_URL {url}")
-        return f"当前页面\n  URL:   {url}\n  标题: {title}"
+        return f"<Current Page>\n  URL:   {url}\n  Title: {title}"
     except Exception as e:
         log(f"browser | GET_URL error: {e}")
-        return f"获取 URL 失败: {e}"
+        return f"<Failed to get URL: {e}>"
 
 
 def browser_scroll(direction: str = "down", amount: int = 500,
@@ -851,7 +852,7 @@ def browser_scroll(direction: str = "down", amount: int = 500,
         element_uuid: 可选。若传入则滚动该元素内部，否则滚动整个页面。
     """
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     direction = direction.lower()
     _dir_map = {
@@ -861,7 +862,7 @@ def browser_scroll(direction: str = "down", amount: int = 500,
         'left':  (-amount, 0),
     }
     if direction not in _dir_map:
-        return f"不支持的滚动方向: {direction!r}，请使用 up / down / left / right。"
+        return f"<Unsupported scroll direction: {direction!r}, please use up / down / left / right>"
 
     delta_x, delta_y = _dir_map[direction]
 
@@ -869,24 +870,24 @@ def browser_scroll(direction: str = "down", amount: int = 500,
         if element_uuid:
             item = _item_map.get(element_uuid)
             if item is None:
-                return f"滚动失败: ID {element_uuid!r} 不存在，请先调用 browse_read。"
+                return f"<Failed to Scroll: ID {element_uuid!r} does not exist, consider calling browse_read first>"
             handle = _resolve_element(_page, item)
             if handle is None:
-                return f"滚动失败: 无法定位元素 [{element_uuid}]"
+                return f"<Failed to Scroll: Cannot locate element [{element_uuid}]>"
             handle.evaluate(
                 f"el => el.scrollBy({delta_x}, {delta_y})"
             )
-            label = f"元素 [{element_uuid}] \"{item['name']}\""
+            label = f"element [{element_uuid}] \"{item['name']}\""
         else:
             _safe_evaluate(_page, f"window.scrollBy({delta_x}, {delta_y})")
-            label = "页面"
+            label = "page"
 
         log(f"browser | SCROLL {label} {direction} {amount}px")
         refresh_msg = _refresh_item_map()
-        return f"已向{direction}滚动 {label} {amount}px\n{refresh_msg}"
+        return f"<Scrolled {label} {direction} by {amount}px>\n{refresh_msg}"
     except Exception as e:
         log(f"browser | SCROLL error: {e}")
-        return f"滚动失败: {e}"
+        return f"<Failed to Scroll: {e}>"
 
 
 def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
@@ -898,7 +899,7 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
                       路径必须是绝对路径或相对于当前工作目录的路径。
     """
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     if isinstance(file_paths, str):
         file_paths = [file_paths]
@@ -906,12 +907,12 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
     # 验证文件存在
     missing = [p for p in file_paths if not os.path.isfile(p)]
     if missing:
-        return f"上传失败: 以下文件不存在:\n" + "\n".join(f"  {p}" for p in missing)
+        return f"<Upload failed: The following files does not exist:\n" + "\n".join(f"  {p}" for p in missing) + ">"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"上传失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        return f"<Failed to Upload: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
 
@@ -920,27 +921,27 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
         with _page.expect_file_chooser(timeout=_timeout_ms()) as fc_info:
             handle = _resolve_element(_page, item)
             if handle is None:
-                return f"上传失败: 无法定位元素 {label}"
+                return f"<Failed to Upload: Cannot locate element {label}>"
             handle.click(timeout=_timeout_ms())
         fc_info.value.set_files(file_paths)
         names = ", ".join(os.path.basename(p) for p in file_paths)
         log(f"browser | UPLOAD {label} ← {file_paths}")
         refresh_msg = _refresh_item_map()
-        return f"已上传 {len(file_paths)} 个文件到 {label}: {names}\n{refresh_msg}"
+        return f"<Uploaded {len(file_paths)} file(s) to {label}: {names}>\n{refresh_msg}"
     except Exception as e:
         # 回退：直接对 input[type=file] 调用 set_input_files
         try:
             handle = _resolve_element(_page, item)
             if handle is None:
-                return f"上传失败: 无法定位元素 {label}: {e}"
+                return f"<Failed to Upload: Cannot locate element {label}: {e}>"
             handle.set_input_files(file_paths, timeout=_timeout_ms())
             names = ", ".join(os.path.basename(p) for p in file_paths)
             log(f"browser | UPLOAD (set_input_files fallback) {label} ← {file_paths}")
             refresh_msg = _refresh_item_map()
-            return f"已上传 {len(file_paths)} 个文件到 {label}: {names}\n{refresh_msg}"
+            return f"<Uploaded {len(file_paths)} file(s) to {label}: {names}>\n{refresh_msg}"
         except Exception as e2:
             log(f"browser | UPLOAD error {label}: {e2}")
-            return f"上传失败 {label}: {e2}"
+            return f"<Failed to Upload {label}: {e2}>"
 
 
 def browser_download(element_uuid: str, save_dir: str = ".") -> str:
@@ -951,12 +952,12 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
         save_dir:     文件保存目录，默认为当前工作目录。
     """
     if _page is None or _page.is_closed():
-        return "浏览器尚未打开任何页面。"
+        return "<The browser has not been opened yet>"
 
     item = _item_map.get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '（映射为空，请先调用 browse_read）'
-        return f"下载失败: ID {element_uuid!r} 不存在。当前已知 ID: {known}"
+        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        return f"<Failed to Download: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
 
@@ -967,7 +968,7 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
         with _page.expect_download(timeout=download_timeout_ms) as dl_info:
             handle = _resolve_element(_page, item)
             if handle is None:
-                return f"下载失败: 无法定位元素 {label}"
+                return f"<Failed to Download: Cannot locate element {label}>"
             handle.click(timeout=_timeout_ms())
         download = dl_info.value
         suggested = download.suggested_filename or f"download_{int(time.time())}"
@@ -976,10 +977,10 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
         size = os.path.getsize(save_path)
         log(f"browser | DOWNLOAD {label} → {save_path} ({size} bytes)")
         refresh_msg = _refresh_item_map()
-        return f"下载完成: {save_path}（{size / 1024:.1f} KB）\n{refresh_msg}"
+        return f"<Download completed: {save_path} ({size / 1024:.1f} KB)>\n{refresh_msg}"
     except Exception as e:
         log(f"browser | DOWNLOAD error {label}: {e}")
-        return f"下载失败 {label}: {e}"
+        return f"<Failed to Download {label}: {e}>"
 
 
 def browser_close() -> str:
@@ -994,11 +995,11 @@ def browser_close() -> str:
             _pw.stop()
         _page = _browser = _pw = None
         _item_map.clear()
-        log("browser | 浏览器已关闭")
-        return "浏览器已关闭。"
+        log("browser | Browser closed")
+        return "<Browser closed>"
     except Exception as e:
         log(f"browser | CLOSE error: {e}")
-        return f"关闭浏览器时出错：{e}"
+        return f"<Error closing browser: {e}>"
 
 
 def is_browser_open() -> bool:
@@ -1037,7 +1038,7 @@ def dispatch(name: str, args: dict, ctx: ToolContext,
     }
     handler = _handlers.get(name)
     if handler is None:
-        return ToolResult(text=f'未知浏览器工具: {name}')
+        return ToolResult(text=f'Unknown browser tool: {name}')
 
     if name == 'browse_read':
         return handler(args, ctx, work_model=work_model)
@@ -1088,8 +1089,8 @@ def _read(args: dict, ctx: ToolContext, work_model=None) -> ToolResult:
         )
         if prev is not None and prev == result:
             url = file_key.removeprefix('browse_read:')
-            result = f'（页面内容没有变化。URL: {url}）'
-            log(f'browse_read | 内容未变化: {url}')
+            result = f'<Page content unchanged. URL: {url}>'
+            log(f'browse_read | Content unchanged: {url}')
 
     file_contents = {file_key: result} if file_key else {}
     return ToolResult(

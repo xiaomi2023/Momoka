@@ -1,5 +1,5 @@
 """
-server/servers/settings.py —— set_wait / set_read_limits 处理器。
+server/servers/settings/handler.py —— set_wait / set_read_limits 处理器。
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ def set_wait(args: dict, ctx: ToolContext) -> ToolResult:
         set_wait_download(seconds)
         msg = f'Browser download timeout set to: {seconds}s'
         return ToolResult(
-            text=f'浏览器下载超时时长已更新为 {seconds} 秒',
+            text=f'<The browser download timeout duration has been updated to {seconds} seconds>',
             log_msg=msg,
             log_role='SETTINGS',
         )
@@ -24,7 +24,7 @@ def set_wait(args: dict, ctx: ToolContext) -> ToolResult:
         _set_wait(seconds)
         msg = f'Timeout set to: {seconds}s'
         return ToolResult(
-            text=f'超时时长已更新为 {seconds} 秒',
+            text=f'<The timeout duration has been updated to {seconds} seconds>',
             log_msg=msg,
             log_role='SETTINGS',
         )

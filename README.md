@@ -79,5 +79,11 @@ python main.py
 通过在\skill目录中添加包含 **SKILL.md** 和资源文件（可选）的Skill文件夹来配置Skill。Skill可以通过Agent动态加载，也可通过命令 **/[Skill name]** 手动加载Skill。  
 更多信息，请参考[这里](https://platform.claude.com/docs/zh-CN/agents-and-tools/agent-skills/)。
 
+## More Information
+- [Guide](docs/index.md)
+  - [Configuration](config.md)
+  - [Headless Mode (BETA)](headless.md)
+  - [Momoka Server (BETA)](momoka_server.md)
+
 ## 📄 License
 This repository is licensed under the [Apache License 2.0](LICENSE).

@@ -24,14 +24,13 @@ from typing import Callable
 
 _SERVER_REGISTRATIONS: list[tuple[str, str, str | None]] = [
     # (模块路径, 工具定义变量名, 条件检查函数名)
-    ('server.servers.system_tooldef', 'TOOL_DEFINITIONS', None),
-    ('server.servers.ask_user_tooldef', 'TOOL_DEFINITIONS', None),
-    ('server.servers.office_tooldef', 'TOOL_DEFINITIONS', None),
-    ('server.servers.settings_tooldef', 'TOOL_DEFINITIONS', None),
-    ('server.servers.skill_tooldef', 'TOOL_DEFINITIONS', None),
+    ('server.servers.system.tooldef', 'TOOL_DEFINITIONS', None),
+    ('server.servers.user.tooldef', 'TOOL_DEFINITIONS', None),
+    ('server.servers.settings.tooldef', 'TOOL_DEFINITIONS', None),
+    ('server.servers.skill.tooldef', 'TOOL_DEFINITIONS', None),
     # 浏览器工具有两组，分别注册
-    ('server.servers.browser_tooldef', 'BROWSER_BASE_TOOLS', None),
-    ('server.servers.browser_tooldef', 'BROWSER_PAGE_TOOLS', 'is_browser_page_available'),
+    ('server.servers.browser.tooldef', 'BROWSER_BASE_TOOLS', None),
+    ('server.servers.browser.tooldef', 'BROWSER_PAGE_TOOLS', 'is_browser_page_available'),
 ]
 
 
@@ -128,7 +127,7 @@ def register_server_tools(
     """注册新的 server 工具。
     
     Args:
-        module_path: 模块路径，如 'server.servers.my_server_tooldef'
+        module_path: 模块路径，如 'server.servers.my_module.tooldef'
         tools_var_name: 工具定义变量名，默认为 'TOOL_DEFINITIONS'
         condition_func_name: 条件检查函数名，None 表示始终可用
         

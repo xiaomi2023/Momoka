@@ -79,5 +79,11 @@ You can use the **/help** command to get help, or the **/set** command to get mo
 Configure Skills by adding Skill folders containing **SKILL.md** and optional resource files to the `skill/` directory. Skills can be dynamically loaded by the Agent, or manually loaded using the **/[Skill name]** command.  
 For more information, please refer to [here](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/).
 
+## More Information
+- [Guide](docs/index.md)
+  - [Configuration](config.md)
+  - [Headless Mode (BETA)](headless.md)
+  - [Momoka Server (BETA)](momoka_server.md)
+
 ## 📄 License
 This repository is licensed under the [Apache License 2.0](LICENSE).

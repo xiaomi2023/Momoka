@@ -1,29 +1,29 @@
 """
-server/servers/browser_tooldef.py —— 浏览器工具定义。
+server/servers/browser/tooldef.py — Browser tool definitions.
 
-涵盖: 所有 browse_* 工具
+Covers: all browse_* tools
 
-工具分为两组：
-  - BROWSER_BASE_TOOLS: 浏览器基础工具（始终可用）
-  - BROWSER_PAGE_TOOLS: 浏览器页面操作工具（仅在浏览器打开后可用）
+Tools are divided into two groups:
+  - BROWSER_BASE_TOOLS: basic browser tools (always available)
+  - BROWSER_PAGE_TOOLS: browser page interaction tools (available only after the browser is opened)
 """
 
 from __future__ import annotations
 
 from config import get_config
 
-# ── 浏览器基础工具（始终可用）────────────────────────────────────────────────
+# ── Basic browser tools (always available) ─────────────────────────────────
 
 BROWSER_BASE_TOOLS: list[dict] = [
     {
         'type': 'function',
         'function': {
             'name': 'browse_open',
-            'description': '用 Chromium 浏览器打开指定网页。',
+            'description': 'Open the specified webpage using the Chromium browser.',
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'url': {'type': 'string', 'description': '要打开的网页 URL'},
+                    'url': {'type': 'string', 'description': 'The URL of the webpage to open'},
                 },
                 'required': ['url'],
             },
@@ -33,15 +33,15 @@ BROWSER_BASE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_search',
-            'description': '使用搜索引擎搜索关键词。',
+            'description': 'Search for keywords using a search engine.',
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'query': {'type': 'string', 'description': '要搜索的关键词'},
+                    'query': {'type': 'string', 'description': 'The keywords to search for'},
                     'engine': {
                         'type': 'string',
                         'enum': ['google', 'bing', 'baidu', 'duckduckgo'],
-                        'description': '搜索引擎，默认 google，支持 google、bing、baidu、duckduckgo。',
+                        'description': 'Search engine. Defaults to google. Supports google, bing, baidu, and duckduckgo.',
                         'default': 'google',
                     },
                 },
@@ -51,7 +51,7 @@ BROWSER_BASE_TOOLS: list[dict] = [
     },
 ]
 
-# ── 浏览器页面操作工具（仅在浏览器打开后可用）─────────────────────────────────
+# ── Browser page interaction tools (available only after the browser is opened) ─
 
 BROWSER_PAGE_TOOLS: list[dict] = [
     {
@@ -59,24 +59,24 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'function': {
             'name': 'browse_read',
             'description': (
-                '读取当前浏览器页面内容。支持三种模式：\n'
-                "  'interactive' — 只列出可交互元素（ID、类型、标签文字），用于快速查找可操作元素\n"
-                "  'text'        — 只显示页面正文（过滤空白）\n"
-                "  'all'         — 正文 + 可交互元素（默认）\n"
-                '在每次浏览器操作后调用以确认结果。'
+                "Read the content of the current browser page. Supports three modes:\n"
+                "  'interactive' — list interactive elements (ID, type, label text)\n"
+                "  'text'        — show the page body text\n"
+                "  'all'         — body text + interactive elements (default)\n"
+                "Call this after each browser operation to confirm the result."
             ),
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'max_chars': {
                         'type': 'integer',
-                        'description': '正文部分返回的最大字符数，默认 4000',
+                        'description': 'Maximum number of characters to return for the body text. Defaults to 4000',
                         'default': 4000,
                     },
                     'mode': {
                         'type': 'string',
                         'enum': ['all', 'interactive', 'text'],
-                        'description': "读取模式，默认 'all'",
+                        'description': "Reading mode. Defaults to 'all'",
                         'default': 'all',
                     },
                 },
@@ -88,13 +88,13 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_click',
-            'description': '点击页面中指定 ID 对应的可交互元素。',
+            'description': 'Click the interactive element with the specified ID on the page.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的元素 ID',
+                        'description': 'Element ID',
                     },
                 },
                 'required': ['element_uuid'],
@@ -105,17 +105,17 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_fill',
-            'description': '向指定 ID 对应的输入框（textbox / searchbox / combobox）填充文字。',
+            'description': 'Fill text into the input element (textbox / searchbox / combobox) with the specified ID.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的元素 ID',
+                        'description': 'Element ID',
                     },
                     'text': {
                         'type': 'string',
-                        'description': '要填充的文字内容',
+                        'description': 'The text content to fill in',
                     },
                 },
                 'required': ['element_uuid', 'text'],
@@ -126,17 +126,17 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_press',
-            'description': '向指定 ID 元素发送按键',
+            'description': 'Send a key press to the element with the specified ID.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的元素 ID',
+                        'description': 'Element ID',
                     },
                     'key': {
                         'type': 'string',
-                        'description': '按键名称，如 Enter、Tab、Escape、ArrowDown 等',
+                        'description': 'Key name, such as Enter, Tab, Escape, ArrowDown, etc.',
                     },
                 },
                 'required': ['element_uuid', 'key'],
@@ -147,14 +147,14 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_find',
-            'description': '在当前页面中搜索包含指定文字的可见元素，返回匹配元素的选择器和文字片段。',
+            'description': 'Search for visible elements containing the specified text on the current page, and return the matching element selectors and text snippets.',
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'text': {'type': 'string', 'description': '要搜索的文字'},
+                    'text': {'type': 'string', 'description': 'The text to search for'},
                     'max_results': {
                         'type': 'integer',
-                        'description': '最多返回的结果数，默认 10',
+                        'description': 'Maximum number of results to return. Defaults to 10',
                         'default': 10,
                     },
                 },
@@ -166,13 +166,13 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_pdf',
-            'description': '将当前浏览器页面导出为 PDF 文件。',
+            'description': 'Export the current browser page as a PDF file.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'save_dir': {
                         'type': 'string',
-                        'description': 'PDF 保存目录，默认为工作目录',
+                        'description': 'Directory to save the PDF. Defaults to the working directory',
                     },
                 },
                 'required': [],
@@ -184,15 +184,12 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'function': {
             'name': 'browse_eval',
             'description': (
-                '在当前浏览器页面中执行 JavaScript 表达式，返回执行结果。\n'
-                '- 不要使用 return 语句。\n'
-                '- 多步逻辑须用 IIFE 包裹。\n'
-                '- 异步操作用 async IIF。\n'
+                'Execute a JavaScript expression in the current browser page and return the result.\n'
             ),
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'script': {'type': 'string', 'description': '要执行的 JavaScript 表达式'},
+                    'script': {'type': 'string', 'description': 'The JavaScript expression to execute'},
                 },
                 'required': ['script'],
             },
@@ -202,19 +199,19 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_wait_for_navigation',
-            'description': '等待当前页面导航完成。在页面跳转时调用以使页面加载完成后再进行其他操作。',
+            'description': 'Wait for the current page navigation to complete. Call this when the page is navigating to ensure the page is fully loaded before performing other operations.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'timeout': {
                         'type': 'integer',
-                        'description': '最大等待时间（秒）',
+                        'description': 'Maximum wait time (seconds)',
                         'default': get_config()['wait'],
                     },
                     'state': {
                         'type': 'string',
                         'enum': ['load', 'domcontentloaded', 'networkidle'],
-                        'description': "等待的加载状态，'load' 等待 load 事件，'domcontentloaded' 等待 DOM 解析完成，'networkidle' 等待网络空闲",
+                        'description': "Loading state to wait for. 'load' waits for the load event, 'domcontentloaded' waits for DOM parsing to complete, 'networkidle' waits for network to be idle",
                         'default': 'networkidle'
                     }
                 },
@@ -226,13 +223,13 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_hover',
-            'description': '将鼠标悬停在指定 ID 对应的元素上，触发 hover 事件。',
+            'description': 'Hover the mouse over the element with the specified ID to trigger the hover event.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的元素 ID',
+                        'description': 'Element ID',
                     },
                 },
                 'required': ['element_uuid'],
@@ -244,20 +241,20 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'function': {
             'name': 'browse_select',
             'description': (
-                '在指定 ID 对应的原生 <select> 下拉框中选择选项。'
-                'value 可以是选项的显示文字（label）、value 属性值，或数字索引（如 \'0\'、\'1\'）。'
-                '对于非原生 select（如自定义下拉组件），应使用 browse_click 配合 browse_hover。'
+                'Select an option in the native <select> dropdown with the specified ID. '
+                "The value can be the option's display text (label), value attribute, or numeric index.md (e.g. '0', '1'). "
+                'For non-native selects (e.g. custom dropdown components), use browse_click together with browse_hover.'
             ),
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的元素 ID',
+                        'description': 'Element ID returned by browse_read',
                     },
                     'value': {
                         'type': 'string',
-                        'description': '要选择的选项，可以是显示文字、value 属性或数字索引',
+                        'description': 'The option to select. Can be display text, value attribute, or numeric index.md',
                     },
                 },
                 'required': ['element_uuid', 'value'],
@@ -268,7 +265,7 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_get_url',
-            'description': '返回当前页面的 URL 和标题。',
+            'description': 'Return the URL and title of the current page.',
             'parameters': {
                 'type': 'object',
                 'properties': {},
@@ -281,22 +278,22 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'function': {
             'name': 'browse_upload',
             'description': (
-                '向指定 ID 对应的文件选择框上传一个或多个本地文件。\n'
-                '路径须为绝对路径或相对于当前工作目录的路径。'
+                'Upload one or more local files to the file input with the specified ID.\n'
+                'Paths must be absolute or relative to the current working directory.'
             ),
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的文件选择框元素 ID',
+                        'description': 'File input element ID',
                     },
                     'file_paths': {
                         'oneOf': [
                             {'type': 'string'},
                             {'type': 'array', 'items': {'type': 'string'}},
                         ],
-                        'description': '要上传的本地文件路径，单文件传字符串，多文件传列表',
+                        'description': 'Local file paths to upload. Pass a string for a single file, or a list for multiple files',
                     },
                 },
                 'required': ['element_uuid', 'file_paths'],
@@ -308,20 +305,20 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'function': {
             'name': 'browse_download',
             'description': (
-                '点击指定 ID 对应的下载链接或按钮，等待浏览器下载完成，'
-                '并将文件保存到指定目录。\n'
-                '下载超时默认 60 秒，下载大文件前可先用 set_wait(target=\'download\') 调高。'
+                'Click the download link or button with the specified ID, wait for the browser download to complete, '
+                'and save the file to the specified directory.\n'
+                'Download timeout defaults to 60 seconds.'
             ),
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'element_uuid': {
                         'type': 'string',
-                        'description': 'browse_read 返回的下载链接/按钮 ID',
+                        'description': 'Download link/button ID returned by browse_read',
                     },
                     'save_dir': {
                         'type': 'string',
-                        'description': '文件保存目录，默认为当前工作目录',
+                        'description': 'Directory to save the file. Defaults to the current working directory',
                     },
                 },
                 'required': ['element_uuid'],
@@ -332,24 +329,24 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_scroll',
-            'description': '滚动页面或指定元素。支持方向: up / down / left / right。',
+            'description': 'Scroll the page or the specified element. Supports directions: up / down / left / right.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'direction': {
                         'type': 'string',
                         'enum': ['down', 'up', 'left', 'right'],
-                        'description': "滚动方向，默认 'down'",
+                        'description': "Scroll direction. Defaults to 'down'",
                         'default': 'down',
                     },
                     'amount': {
                         'type': 'integer',
-                        'description': '滚动像素数，默认 500',
+                        'description': 'Number of pixels to scroll. Defaults to 500',
                         'default': 500,
                     },
                     'element_uuid': {
                         'type': 'string',
-                        'description': '可选。若传入则滚动该元素内部容器，否则滚动整个页面',
+                        'description': 'Optional. If provided, scrolls the inner container of that element; otherwise scrolls the entire page',
                     },
                 },
                 'required': [],
@@ -360,7 +357,7 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_close',
-            'description': '关闭浏览器。',
+            'description': 'Close the browser.',
             'parameters': {
                 'type': 'object',
                 'properties': {},
@@ -371,41 +368,41 @@ BROWSER_PAGE_TOOLS: list[dict] = [
 ]
 
 
-# ── 条件检查函数 ────────────────────────────────────────────────────────────
+# ── Availability checks ────────────────────────────────────────────────────
 
 def is_browser_base_available() -> bool:
-    """浏览器基础工具始终可用。"""
+    """Basic browser tools are always available."""
     return True
 
 
 def is_browser_page_available() -> bool:
     """
-    浏览器页面操作工具仅在浏览器打开后可用。
-    此函数会被 Host 层调用以决定是否包含这些工具。
+    Browser page interaction tools are only available after the browser is opened.
+    This function is called by the Host layer to decide whether to include these tools.
     """
-    # 延迟导入以避免循环依赖
+    # Lazy import to avoid circular dependencies
     try:
-        from server.servers.browser import is_browser_open
+        from server.servers.browser.handler import is_browser_open
         return is_browser_open()
     except ImportError:
         return False
 
 
-# ── 完整工具列表（向后兼容）─────────────────────────────────────────────────
+# ── Full tool list (backward compatibility) ────────────────────────────────
 
 ALL_BROWSER_TOOLS: list[dict] = BROWSER_BASE_TOOLS + BROWSER_PAGE_TOOLS
 
 
-# ── 获取可用浏览器工具函数 ──────────────────────────────────────────────────
+# ── Get available browser tools ────────────────────────────────────────────
 
 def get_browser_tools(browser_open: bool = False) -> list[dict]:
-    """根据浏览器状态获取可用的浏览器工具列表。
-    
+    """Get the list of available browser tools based on the browser state.
+
     Args:
-        browser_open: 浏览器是否已打开
-        
+        browser_open: Whether the browser is already open
+
     Returns:
-        可用的浏览器工具列表
+        List of available browser tools
     """
     tools = BROWSER_BASE_TOOLS.copy()
     if browser_open:
