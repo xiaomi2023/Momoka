@@ -8,8 +8,6 @@
   </p>
 </div>
 
----
-
 <div align="center">
 
 **English** | [中文](README.md)
