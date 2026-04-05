@@ -52,7 +52,7 @@ git clone https://github.com/xiaomi2023/Momoka
 ### Install Dependencies
 
 ```bash
-pip install openai rebrowser-playwright openpyxl python-docx rich
+pip install -r requirements.txt
 python -m rebrowser_playwright install chromium
 ```
 

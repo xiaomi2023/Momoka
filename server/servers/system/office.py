@@ -1,7 +1,7 @@
 """
-server/servers/system/office.py —— Office 文件操作工具。
+server/servers/system/office.py —— Office file operation tools.
 
-涵盖: docx 读取（doc模式）、xlsx/csv 读取、LibreOffice 转换。
+Covers: docx reading (doc mode), xlsx/csv reading, LibreOffice conversion.
 """
 
 from __future__ import annotations
@@ -12,15 +12,43 @@ import shutil
 import subprocess
 import tempfile
 
-from docx import Document
-import openpyxl
-from openpyxl.utils import get_column_letter as gcl
-
 from logger import log
 from server import ToolResult
+from config import get_working_config
+
+# ── 可选依赖检测 ─────────────────────────────────────────────────────────
+
+try:
+    from docx import Document
+    _HAS_DOCX = True
+except ImportError:
+    _HAS_DOCX = False
+    Document = None  # type: ignore
+
+try:
+    import openpyxl
+    from openpyxl.utils import get_column_letter as gcl
+    _HAS_OPENPYXL = True
+except ImportError:
+    _HAS_OPENPYXL = False
+    openpyxl = None  # type: ignore
+    gcl = None  # type: ignore
 
 
-# ── DOCX 读取 ─────────────────────────────────────────────────────────────
+# ── Missing dependency messages ───────────────────────────────────────────
+
+_MISSING_DOCX_MSG = (
+    "Cannot read Word document: python-docx library is missing.\n"
+    "Consider using other methods to read"
+)
+
+_MISSING_OPENPYXL_MSG = (
+    "Cannot read Excel file: openpyxl library is missing.\n"
+    "Consider reading CSV format files directly or using other methods"
+)
+
+
+# ── DOCX reading ───────────────────────────────────────────────────────────
 
 _HEADING_MAP = {
     'Heading 1': '#', '标题 1': '#',
@@ -30,7 +58,13 @@ _HEADING_MAP = {
 
 
 def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
-    """使用 python-docx 提取 Word 文档为 Markdown 格式。"""
+    """Extract Word document to Markdown format using python-docx."""
+    if not _HAS_DOCX:
+        return ToolResult(
+            text=_MISSING_DOCX_MSG,
+            log_msg=log_label,
+        )
+
     tmp_dir = None
     docx_path = file_path
     ext = os.path.splitext(file_path)[1].lower()
@@ -39,35 +73,37 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
         lo = shutil.which('libreoffice') or shutil.which('soffice')
         if not lo:
             return ToolResult(
-                text=f'读取 {ext} 格式需要 LibreOffice,但系统中未找到 libreoffice / soffice 命令。',
+                text=f'<Reading {ext} format requires LibreOffice, but libreoffice / soffice command not found>',
                 log_msg=log_label,
             )
         tmp_dir = tempfile.mkdtemp()
+        timeout = get_working_config().get('wait', 10)
         try:
             cp = subprocess.run(
                 [lo, '--headless', '--convert-to', 'docx', '--outdir', tmp_dir, file_path],
-                capture_output=True, timeout=30,
+                capture_output=True, timeout=timeout,
             )
             if cp.returncode != 0:
                 err = cp.stderr.decode(encoding, errors='replace').strip()
                 return ToolResult(
-                    text=f'LibreOffice 转换失败（returncode={cp.returncode}）: {err}',
+                    text=f'<LibreOffice conversion failed (returncode={cp.returncode}): {err}>',
                     log_msg=log_label,
                 )
             converted = [f for f in os.listdir(tmp_dir) if f.endswith('.docx')]
             if not converted:
                 return ToolResult(
-                    text='LibreOffice 转换完成但未生成 .docx 文件,转换可能不受支持。',
+                    text='<LibreOffice conversion completed but no .docx file was generated, conversion may not be supported>',
                     log_msg=log_label,
                 )
             docx_path = os.path.join(tmp_dir, converted[0])
         except subprocess.TimeoutExpired:
-            return ToolResult(text='LibreOffice 转换超时（超过 30 秒）。', log_msg=log_label)
+            timeout = get_working_config().get('wait', 10)
+            return ToolResult(text=f'<LibreOffice conversion timed out (exceeded {timeout} seconds)>', log_msg=log_label)
         except Exception as e:
-            return ToolResult(text=f'调用 LibreOffice 时出错: {type(e).__name__}: {e}', log_msg=log_label)
+            return ToolResult(text=f'<Error calling LibreOffice: {type(e).__name__}: {e}>', log_msg=log_label)
 
     try:
-        doc = Document(docx_path)
+        doc = Document(docx_path)  # type: ignore
     finally:
         if tmp_dir:
             shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -103,37 +139,44 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
     line_count = len(md_content.splitlines())
     if line_count > max_lines:
         return ToolResult(
-            text=(f'文件过大: {file_path}（提取后共 {line_count} 行,当前行数限制: {max_lines} 行）。'
-                  f'可以使用 set_read_limits 调高限制。'),
+            text=(f'<File too large: {file_path} ({line_count} lines after extraction, current line limit: {max_lines}), '
+                  f'Consider using set_read_limits to increase the limits>'),
             log_msg=log_label,
         )
     return ToolResult(
-        text=f'打开文件（doc模式）: {file_path}\n{file_path}:\n{md_content}',
+        text=f'<Opened File (doc mode): {file_path}>\n{file_path}:\n{md_content}',
         file_contents={file_path: md_content},
         log_msg=log_label,
     )
 
 
-# ── Excel/CSV 读取 ───────────────────────────────────────────────────────
+# ── Excel/CSV reading ─────────────────────────────────────────────────────
 
 def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
                     range_str: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
-    """读取 Excel 或 CSV 文件。"""
+    """Read Excel or CSV file."""
     ext = os.path.splitext(file_path)[1].lower()
 
     # ── CSV ──────────────────────────────────────────────────────────
     if ext == '.csv':
         return _read_csv_file(file_path, encoding, max_lines, log_label)
 
-    # ── 非 xlsx:先用 LibreOffice 转换 ───────────────────────────────
+    # ── Excel requires openpyxl ─────────────────────────────────────
+    if not _HAS_OPENPYXL:
+        return ToolResult(
+            text=_MISSING_OPENPYXL_MSG,
+            log_msg=log_label,
+        )
+
+    # ── Non-xlsx: convert with LibreOffice first ─────────────────────
     xlsx_exts = {'.xlsx', '.xlsm', '.xltx', '.xltm'}
     xlsx_path, tmp_dir = _ensure_xlsx(file_path, ext, xlsx_exts, encoding, log_label)
     if isinstance(xlsx_path, ToolResult):  # 转换失败时直接返回错误
         return xlsx_path
 
     try:
-        wb_val = openpyxl.load_workbook(xlsx_path, data_only=True)
-        wb_fml = openpyxl.load_workbook(xlsx_path, data_only=False)
+        wb_val = openpyxl.load_workbook(xlsx_path, data_only=True)  # type: ignore
+        wb_fml = openpyxl.load_workbook(xlsx_path, data_only=False)  # type: ignore
     finally:
         if tmp_dir:
             shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -143,12 +186,12 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
     ws_val = wb_val[target_name]
     ws_fml = wb_fml[target_name]
 
-    # ── 范围解析 ──────────────────────────────────────────────────────
+    # ── Range parsing ────────────────────────────────────────────────
     if range_str:
         try:
-            min_col, min_row, max_col, max_row = openpyxl.utils.cell.range_boundaries(range_str)
+            min_col, min_row, max_col, max_row = openpyxl.utils.cell.range_boundaries(range_str)  # type: ignore
         except Exception:
-            return ToolResult(text=f'无效的范围格式: {range_str},请使用如 A1:D20 的格式。',
+            return ToolResult(text=f'<Invalid range format: {range_str}, please use format like A1:D20>',
                               log_msg=log_label)
     else:
         min_row, min_col = 1, 1
@@ -170,19 +213,19 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
             fml = ws_fml.cell(r, c).value
             row_vals.append('' if val is None else str(val))
             if isinstance(fml, str) and fml.startswith('='):
-                formula_cells.append(f'{gcl(c)}{r}={fml}')
+                formula_cells.append(f'{gcl(c)}{r}={fml}')  # type: ignore
         csv_lines.append(','.join(row_vals))
 
     parts = [
-        f'文件: {file_path}',
-        f'所有Sheet: {", ".join(sheet_names)}',
-        f'当前Sheet: {target_name}',
+        f'File: {file_path}',
+        f'All Sheets: {", ".join(sheet_names)}',
+        f'Current Sheet: {target_name}',
     ]
     if range_str:
-        parts.append(f'范围: {range_str}')
+        parts.append(f'Range: {range_str}')
     if truncated:
-        parts.append(f'（已截断至 {actual_rows} 行 × {actual_cols} 列,'
-                     f'当前限制: {max_lines},可用 set_read_limits 调高）')
+        parts.append(f'(Truncated to {actual_rows} rows × {actual_cols} columns, '
+                     f'current limit: {max_lines}, use set_read_limits to increase)')
     parts.append('')
 
     if sheet_mode in ('all', 'csv_only'):
@@ -192,10 +235,10 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
     if sheet_mode in ('all', 'formula_only'):
         parts.append('')
         if formula_cells:
-            parts.append(f'[{target_name}] 公式单元格:')
+            parts.append(f'[{target_name}] Formula Cells:')
             parts.extend(formula_cells)
         else:
-            parts.append(f'[{target_name}] 公式单元格: （无）')
+            parts.append(f'[{target_name}] Formula Cells: (none)')
 
     result = '\n'.join(parts)
     file_key = f'{file_path}::{target_name}'
@@ -203,16 +246,16 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
 
 
 def _read_csv_file(file_path: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
-    """读取 CSV 文件。"""
+    """Read CSV file."""
     with open(file_path, 'r', encoding=encoding, newline='') as fh:
         reader = csv.reader(fh)
         csv_lines = []
         for i, row in enumerate(reader):
             if i >= max_lines:
-                csv_lines.append(f'（已截断,超过行数限制 {max_lines},可用 set_read_limits 调高）')
+                csv_lines.append(f'(Truncated, exceeded line limit {max_lines}, use set_read_limits to increase)')
                 break
             csv_lines.append(','.join(row))
-    parts = [f'文件: {file_path}', '格式: CSV', '']
+    parts = [f'File: {file_path}', 'Format: CSV', '']
     parts.extend(csv_lines)
     result = '\n'.join(parts)
     return ToolResult(text=result, file_contents={file_path: result}, log_msg=log_label)
@@ -220,8 +263,8 @@ def _read_csv_file(file_path: str, encoding: str, max_lines: int, log_label: str
 
 def _ensure_xlsx(file_path: str, ext: str, xlsx_exts: set,
                  encoding: str, log_label: str) -> tuple[str | ToolResult, str | None]:
-    """若文件不是 xlsx 系列,调用 LibreOffice 转换;返回 (xlsx_path, tmp_dir)。
-    转换失败时返回 (ToolResult, None)。
+    """If file is not xlsx format, convert with LibreOffice; returns (xlsx_path, tmp_dir).
+    Returns (ToolResult, None) on conversion failure.
     """
     if ext in xlsx_exts:
         return file_path, None
@@ -229,38 +272,40 @@ def _ensure_xlsx(file_path: str, ext: str, xlsx_exts: set,
     lo = shutil.which('libreoffice') or shutil.which('soffice')
     if not lo:
         return ToolResult(
-            text=(f'读取 {ext} 格式需要 LibreOffice,但系统中未找到 libreoffice / soffice 命令。'
-                  f'请安装 LibreOffice 后重试,或手动将文件另存为 .xlsx 格式。'),
+            text=(f'<Reading {ext} format requires LibreOffice, but libreoffice / soffice command not found. '
+                  f'Consider manually saving the file as .xlsx format>'),
             log_msg=log_label,
         ), None
 
     tmp_dir = tempfile.mkdtemp()
     try:
+        timeout = get_working_config().get('wait', 10)
         cp = subprocess.run(
             [lo, '--headless', '--convert-to', 'xlsx', '--outdir', tmp_dir, file_path],
-            capture_output=True, timeout=30,
+            capture_output=True, timeout=timeout,
         )
         if cp.returncode != 0:
             err = cp.stderr.decode(encoding, errors='replace').strip()
             shutil.rmtree(tmp_dir, ignore_errors=True)
             return ToolResult(
-                text=f'LibreOffice 转换失败（returncode={cp.returncode}）: {err}',
+                text=f'<LibreOffice conversion failed (returncode={cp.returncode}): {err}>',
                 log_msg=log_label,
             ), None
         converted = [f for f in os.listdir(tmp_dir) if f.endswith('.xlsx')]
         if not converted:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             return ToolResult(
-                text='LibreOffice 转换完成但未生成 .xlsx 文件,转换可能不受支持。',
+                text='<LibreOffice conversion completed but no .docx file was generated, conversion may not be supported>',
                 log_msg=log_label,
             ), None
         return os.path.join(tmp_dir, converted[0]), tmp_dir
     except subprocess.TimeoutExpired:
         shutil.rmtree(tmp_dir, ignore_errors=True)
-        return ToolResult(text='LibreOffice 转换超时（超过 30 秒）。', log_msg=log_label), None
+        timeout = get_working_config().get('wait', 10)
+        return ToolResult(text=f'<LibreOffice conversion timed out (exceeded {timeout} seconds)>', log_msg=log_label), None
     except Exception as e:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         return ToolResult(
-            text=f'调用 LibreOffice 时出错: {type(e).__name__}: {e}',
+            text=f'<Error calling LibreOffice: {type(e).__name__}: {e}>',
             log_msg=log_label,
         ), None
