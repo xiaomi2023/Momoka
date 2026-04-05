@@ -7,12 +7,9 @@ server/router.py —— 工具调用调度路由。
   3. 将结果写回 model 历史
   4. 管理文件折叠与 finish 后的全量折叠
 
-具体执行实现分布在：
-  server/servers/settings/settings.py  —— set_wait / set_read_limits
-  server/servers/skill/skill.py        —— get_skill
-  server/servers/system/system.py      —— system_command / change_directory / ask_user / finish
-                                         read_file / edit_file / replace_file / read_sheet
-  server/servers/browser/browser.py    —— 所有 browse_* 工具
+路由机制：
+  - 优先使用自动注册的 Server 模块（通过 server.servers.dispatch_tool）
+  - 对浏览器工具保持特殊处理（因为需要传入 work_model）
 """
 
 from __future__ import annotations
@@ -22,39 +19,38 @@ import json
 from config import get_config
 from logger import log
 from server import ToolResult, ToolContext
-from server.servers import system as system_handler
-from server.servers import user as user_handler
-from server.servers import browser as browser_handler
-from server.servers import settings, skill
+from server.servers import dispatch_tool
 
 
 # ── 路由 ──────────────────────────────────────────────────────────────────
 
 def _execute_tool(name: str, args: dict, ctx: ToolContext,
                   work_model=None) -> ToolResult:
-    match name:
-        case 'finish':           return system_handler.finish(args, ctx)
-        case 'system_command':   return system_handler.system_command(args, ctx)
-        case 'change_directory': return system_handler.change_directory(args, ctx)
-        case 'ask_user':         return user_handler.ask_user(args, ctx)
-        case 'set_todolist':     return user_handler.set_todolist(args, ctx)
-        case 'ask_option':       return user_handler.ask_option(args, ctx)
-
-        case 'edit_file':        return system_handler.edit_file_tool(args, ctx)
-        case 'replace_file':     return system_handler.replace_file(args, ctx)
-        case 'read_file':        return system_handler.read_file(args, ctx)
-        case 'read_sheet':       return system_handler.read_sheet(args, ctx)
-
-        case 'get_skill':        return skill.get_skill(args, ctx)
-
-        case 'set_wait':         return settings.set_wait(args, ctx)
-        case 'set_read_limits':  return settings.set_read_limits(args, ctx)
-
-        case _ if name.startswith('browse_'):
-            return browser_handler.dispatch(name, args, ctx, work_model=work_model)
-
-        case _:
-            return ToolResult(text=f'未知工具: {name}')
+    """执行工具 —— 自动分发到注册的 Server。
+    
+    优先使用自动注册机制分发，对浏览器工具保持特殊处理。
+    
+    Args:
+        name: 工具名称
+        args: 工具参数
+        ctx: 执行上下文
+        work_model: 工作模型（浏览器工具需要）
+        
+    Returns:
+        ToolResult: 执行结果
+    """
+    # 浏览器工具特殊处理（需要传入 work_model）
+    if name.startswith('browse_'):
+        from server.servers import browser as browser_handler
+        return browser_handler.dispatch(name, args, ctx, work_model=work_model)
+    
+    # 尝试自动分发到已注册的 Server
+    result = dispatch_tool(name, args, ctx)
+    if result is not None:
+        return result
+    
+    # 未知工具
+    return ToolResult(text=f'未知工具: {name}')
 
 
 # ── user_log 统一输出 ─────────────────────────────────────────────────────
@@ -80,8 +76,16 @@ def execute_tool_calls(
 ) -> tuple[bool, dict[str, str]]:
     """依次执行 tool_calls，将结果写回 model 历史。
 
+    Args:
+        work_model: 工作模型实例
+        tool_calls: 工具调用列表
+        user: 用户交互对象
+        input_func: 输入函数
+        
     Returns:
         (is_finish, all_file_contents)
+        - is_finish: 是否调用了 finish 工具
+        - all_file_contents: 所有文件内容字典
     """
     cfg = get_config()
     ctx = ToolContext(cfg=cfg, input_func=input_func)
