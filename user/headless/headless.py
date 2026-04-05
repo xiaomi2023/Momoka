@@ -141,7 +141,7 @@ class HeadlessUser(BaseUser):
 
                 self.session.update(result)
 
-                if result['is_finish']:
+                if result.is_finish:
                     self._agent.finish_task()
                     self._write_json({
                         'type': 'task_finish'

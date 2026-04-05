@@ -221,11 +221,11 @@ class CLIUser(BaseUser):
             if handled and skill_name is not None:
                 # /skill_name 强制加载 skill
                 log(f'skill trigger: {skill_name}')
-                success, msg = self._agent.load_skill(skill_name)
-                if success:
+                load_result = self._agent.load_skill(skill_name)
+                if load_result.success:
                     log(f'system (skill inject): {skill_name}')
                 else:
-                    self.send_error(msg)
+                    self.send_error(load_result.message)
                 continue
 
             # 普通用户消息，交给 agent 处理
@@ -236,7 +236,7 @@ class CLIUser(BaseUser):
 
             self.session.update(result)
 
-            if result['is_finish']:
+            if result.is_finish:
                 self._agent.finish_task()
                 self.on_task_finish()
 

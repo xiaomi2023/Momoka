@@ -1,17 +1,17 @@
-"""Momoka - AI Agent 程序入口。
+"""Momoka - AI Agent Entry Point.
 
-支持两种运行模式：
-1. CLI 模式（默认）：交互式终端界面
-2. Headless 模式：无头接口，适合管道/文件通信
+Supports two running modes:
+1. CLI mode (default): Interactive terminal interface
+2. Headless mode: Headless interface for pipe/file communication
 
-使用方式：
-    # CLI 模式
+Usage:
+    # CLI mode
     python main.py
 
-    # Headless 模式（标准输入输出）
+    # Headless mode (stdio)
     python main.py --headless stdio
 
-    # Headless 模式（文件读写）
+    # Headless mode (file I/O)
     python main.py --headless file --input input.txt --output output.txt
 """
 
@@ -22,17 +22,17 @@ from host.momoka import Momoka
 
 
 def parse_args():
-    """解析命令行参数。"""
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Momoka - AI Agent',
+        description='Momoka',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-  python main.py                           # CLI 模式
-  python main.py --headless stdio          # 标准输入输出无头模式
+Examples:
+  python main.py                           # CLI mode
+  python main.py --headless stdio          # Headless mode with stdio
   python main.py --headless file \\
            --input input.txt \\
-           --output output.txt             # 文件读写模式
+           --output output.txt             # File I/O mode
         """
     )
 
@@ -40,29 +40,29 @@ def parse_args():
         '--headless',
         choices=['stdio', 'file'],
         default=None,
-        help='运行无头模式：stdio（标准输入输出）或 file（文件读写）'
+        help='Run in headless mode: stdio (standard input/output) or file (file I/O)'
     )
 
     parser.add_argument(
         '--input',
         default='input.txt',
-        help='文件模式下的输入文件路径（默认：input.txt）'
+        help='Input file path for file mode (default: input.txt)'
     )
 
     parser.add_argument(
         '--output',
         default='output.txt',
-        help='文件模式下的输出文件路径（默认：output.txt）'
+        help='Output file path for file mode (default: output.txt)'
     )
 
     return parser.parse_args()
 
 
 def main():
-    """程序入口。"""
+    """Program entry point."""
     args = parse_args()
 
-    # 根据模式选择用户接口
+    # Select user interface based on mode
     if args.headless == 'stdio':
         from user.headless import StdioHeadlessUser
         ui = StdioHeadlessUser()
@@ -73,7 +73,7 @@ def main():
             output_file=args.output
         )
     else:
-        # 默认 CLI 模式
+        # Default CLI mode
         from user.cli import CLIUser
         ui = CLIUser()
 
@@ -83,7 +83,7 @@ def main():
     try:
         ui.run()
     finally:
-        # 清理资源（文件模式需要关闭文件描述符）
+        # Clean up resources (file mode needs to close file descriptors)
         if hasattr(ui, 'close'):
             ui.close()
 

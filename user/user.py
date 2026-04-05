@@ -6,6 +6,7 @@ user/user.py —— 用户交互抽象接口与会话状态管理。
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class Session:
@@ -17,12 +18,23 @@ class Session:
         self.output_tokens = 0
         self.round_count = 0
 
-    def update(self, result: dict) -> None:
-        """根据 Agent 返回结果更新会话状态。"""
-        self.input_tokens += result.get('input_tokens', 0)
-        self.output_tokens += result.get('output_tokens', 0)
-        self.round_count += result.get('round_count', 0)
-        self.file_contents = result.get('file_contents', {})
+    def update(self, result: dict | Any) -> None:
+        """根据 Agent 返回结果更新会话状态。
+        
+        Args:
+            result: Agent 返回结果，可以是 dict 或具有相应属性的对象
+        """
+        # 兼容 dict 和 dataclass
+        if isinstance(result, dict):
+            self.input_tokens += result.get('input_tokens', 0)
+            self.output_tokens += result.get('output_tokens', 0)
+            self.round_count += result.get('round_count', 0)
+            self.file_contents = result.get('file_contents', {})
+        else:
+            self.input_tokens += getattr(result, 'input_tokens', 0)
+            self.output_tokens += getattr(result, 'output_tokens', 0)
+            self.round_count += getattr(result, 'round_count', 0)
+            self.file_contents = getattr(result, 'file_contents', {})
 
     def reset(self) -> None:
         """重置会话状态。"""
