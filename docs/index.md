@@ -16,3 +16,7 @@
 - [Configuration](configuration.md)
 - [Headless Mode (BETA)](headless.md)
 - [Momoka Server (BETA)](momoka_server.md)
+
+---
+
+*Last updated: 2026-04-05*
