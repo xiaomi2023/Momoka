@@ -52,7 +52,7 @@ class OptionSelector:
 
         # 尝试交互式选择
         try:
-            self._interactive(callbacks, input_func)
+            return self._interactive(callbacks, input_func)
         except Exception:
             # 任何异常降级为编号输入
             return self._fallback_numbered(input_func)
@@ -62,25 +62,33 @@ class OptionSelector:
     def _interactive(self, callbacks: SelectorCallbacks, input_func=None):
         """交互式选择主循环。"""
         labels = self._get_labels()
-        callbacks.render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
 
-        while True:
-            key = callbacks.get_key()
+        # 启动 Live 渲染
+        callbacks.start_live()
 
-            if key == '\x1b[A':  # Up
-                self.cursor_idx = (self.cursor_idx - 1) % len(self.options)
-                callbacks.render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
-            elif key == '\x1b[B':  # Down
-                self.cursor_idx = (self.cursor_idx + 1) % len(self.options)
-                callbacks.render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
-            elif key == '\r':  # Enter
-                return self._confirm_selection(callbacks)
-            elif key == ' ' and self.allow_multiple:  # Space（仅多选）
-                self._toggle_selection()
-                callbacks.render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
-            elif key == '\x1b' or key in ('q', 'Q'):  # ESC/q → 自定义输入
-                callbacks.clear_lines(self._calc_display_lines())
-                return self._custom_input(input_func)
+        # 首次渲染
+        callbacks.update_render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
+
+        try:
+            while True:
+                key = callbacks.get_key()
+
+                if key == '\x1b[A':  # Up
+                    self.cursor_idx = (self.cursor_idx - 1) % len(self.options)
+                    callbacks.update_render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
+                elif key == '\x1b[B':  # Down
+                    self.cursor_idx = (self.cursor_idx + 1) % len(self.options)
+                    callbacks.update_render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
+                elif key == '\r':  # Enter
+                    return self._confirm_selection(callbacks)
+                elif key == ' ' and self.allow_multiple:  # Space（仅多选）
+                    self._toggle_selection()
+                    callbacks.update_render(self.question, labels, self.cursor_idx, self.selected_indices, self.allow_multiple)
+                elif key == '\x1b' or key in ('q', 'Q'):  # ESC/q → 自定义输入
+                    return self._custom_input(input_func, callbacks)
+        finally:
+            # 确保停止 Live 渲染
+            callbacks.stop_live()
 
     # ── 降级：编号输入 ─────────────────────────────────────────────────
 
@@ -106,7 +114,7 @@ class OptionSelector:
         if input_func is None:
             input_func = input
 
-        reply = input_func('>> ')
+        reply = input_func('-> ')
         reply_stripped = reply.strip()
 
         if not reply_stripped:
@@ -139,10 +147,6 @@ class OptionSelector:
         """获取所有选项的标签列表。"""
         return [opt.get('label', f'Option{i + 1}') for i, opt in enumerate(self.options)]
 
-    def _calc_display_lines(self) -> int:
-        """计算显示总行数（用于清屏）。"""
-        return 2 + len(self.options) + 1  # 标题 + 选项 + 空行
-
     def _toggle_selection(self):
         """切换当前光标选项的选中状态（仅多选模式）。"""
         if self.cursor_idx in self.selected_indices:
@@ -152,26 +156,34 @@ class OptionSelector:
 
     def _confirm_selection(self, callbacks: SelectorCallbacks) -> str:
         """确认当前选择并返回结果。"""
-        callbacks.clear_lines(self._calc_display_lines())
-
         if self.allow_multiple:
             if not self.selected_indices:
-                return self._format_result([], is_custom=False, custom_text='(No selection)')
-            selected = [
-                self.options[i].get('label', f'Option{i+1}')
-                for i in sorted(self.selected_indices)
-            ]
-            return self._format_result(selected, is_custom=False)
+                result = self._format_result([], is_custom=False, custom_text='(No selection)')
+            else:
+                selected = [
+                    self.options[i].get('label', f'Option{i+1}')
+                    for i in sorted(self.selected_indices)
+                ]
+                result = self._format_result(selected, is_custom=False)
         else:
             label = self.options[self.cursor_idx].get('label', f'Option{self.cursor_idx+1}')
-            return self._format_result([label], is_custom=False)
+            result = self._format_result([label], is_custom=False)
 
-    def _custom_input(self, input_func=None) -> str:
+        # 停止 Live 渲染，transient 模式会自动保留最终渲染内容
+        callbacks.stop_live()
+
+        return result
+
+    def _custom_input(self, input_func=None, callbacks=None) -> str:
         """进入自定义输入模式。"""
+        # 先停止 Live 渲染，再获取用户输入
+        if callbacks is not None:
+            callbacks.stop_live()
+        
         if input_func is None:
             input_func = input
 
-        reply = input_func('>> ')
+        reply = input_func('-> ')
         reply_stripped = reply.strip()
         if reply_stripped:
             return self._format_result([], is_custom=True, custom_text=reply_stripped)

@@ -40,6 +40,14 @@ class ToolContext:
     input_func: Callable = field(default=input)
 
 
+class UnknownToolError(Exception):
+    """表示工具名称在当前 Server 中无法匹配。
+    
+    由 dispatch_tool 统一捕获并转换为 ToolResult。
+    """
+    pass
+
+
 # ── 延迟导入函数 ────────────────────────────────────────────────────────────
 # 在类定义之后导入，避免循环导入
 
@@ -48,5 +56,6 @@ from server.servers.system.system import _system_command_impl as system_command,
 
 __all__ = [
     'execute_tool_calls', '_execute_tool', 'ToolResult', 'ToolContext',
-    'system_command', 'find_file', 'edit_file', 'get_cwd', 'set_cwd_explicit',
+    'UnknownToolError', 'system_command', 'find_file', 'edit_file', 
+    'get_cwd', 'set_cwd_explicit',
 ]

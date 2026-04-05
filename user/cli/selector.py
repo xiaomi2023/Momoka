@@ -2,6 +2,7 @@
 user/cli/selector.py —— 选项选择器的 CLI 终端适配器。
 
 将 OptionSelector 的回调接口桥接到 Rich 终端渲染和跨平台按键监听。
+使用 Rich Live 实现优雅的终端刷新，无需手动处理 ANSI 转义码。
 """
 
 from __future__ import annotations
@@ -10,16 +11,14 @@ import sys
 from dataclasses import dataclass
 from typing import Callable
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.text import Text
+from rich.live import Live
 
 
 @dataclass
 class SelectorCallbacks:
     """选项选择器的回调接口，由 CLI 层提供实现。"""
-
-    render: Callable[[str, list[str], int, set[int], bool], None]
-    """渲染函数 (question, labels, cursor_idx, selected_indices, allow_multiple)"""
 
     get_key: Callable[[], str]
     """阻塞获取按键，返回按键字符/转义序列（如 '\\x1b[A' 表示上箭头）"""
@@ -27,8 +26,14 @@ class SelectorCallbacks:
     is_tty: Callable[[], bool]
     """检测是否为 TTY 环境"""
 
-    clear_lines: Callable[[int], None]
-    """清除指定行数的输出"""
+    start_live: Callable[[], None]
+    """启动 Live 渲染"""
+
+    update_render: Callable[[str, list[str], int, set[int], bool], None]
+    """更新渲染内容 (question, labels, cursor_idx, selected_indices, allow_multiple)"""
+
+    stop_live: Callable[[], None]
+    """停止 Live 渲染"""
 
 
 class CliSelectorAdapter:
@@ -36,37 +41,33 @@ class CliSelectorAdapter:
 
     def __init__(self, console: Console):
         self._console = console
+        self._live: Live | None = None
 
     def make_callbacks(self) -> SelectorCallbacks:
         """构建回调接口实例。"""
         return SelectorCallbacks(
-            render=self._render,
             get_key=self._get_key,
             is_tty=self._is_tty,
-            clear_lines=self._clear_lines,
+            start_live=self._start_live,
+            update_render=self._update_render,
+            stop_live=self._stop_live,
         )
 
     # ── 回调实现 ───────────────────────────────────────────────────────
 
-    def _render(
+    def _build_renderable(
         self,
         question: str,
         labels: list[str],
         cursor_idx: int,
         selected_indices: set[int],
         allow_multiple: bool,
-    ):
-        """使用 Rich 渲染选项列表。"""
-        lines: list[str | Text] = []
+    ) -> Group:
+        """构建 Rich 可渲染对象。"""
+        items: list[Text] = []
 
         # 标题
-        lines.append(Text(question, style='bold cyan'))
-
-        # 提示
-        if allow_multiple:
-            lines.append(Text('(↑↓ navigate, Space select, Enter confirm, ESC/q custom)', style='dim'))
-        else:
-            lines.append(Text('(↑↓ navigate, Enter confirm, ESC/q custom)', style='dim'))
+        items.append(Text(question, style="bold cyan"))
 
         # 选项
         for i, label in enumerate(labels):
@@ -84,23 +85,55 @@ class CliSelectorAdapter:
             else:
                 marker = '  ' + marker
 
+            # 应用样式
             if is_cursor:
-                lines.append(Text(marker + label, style='bold cyan'))
+                items.append(Text(f"{marker}{label}", style="bold cyan"))
             elif is_selected:
-                lines.append(Text(marker + label, style='green'))
+                items.append(Text(f"{marker}{label}", style="green"))
             else:
-                lines.append(marker + label)
+                items.append(f"{marker}{label}")
 
-        # 空行
-        lines.append('')
+        # 提示（放在最下面）
+        if allow_multiple:
+            items.append(Text("(↑↓ navigate, Space select, Enter confirm, ESC/q custom)", style="dim"))
+        else:
+            items.append(Text("(↑↓ navigate, Enter confirm, ESC/q custom)", style="dim"))
 
-        # 清屏并重绘
-        self._clear_lines(len(lines))
-        for line in lines:
-            if isinstance(line, Text):
-                self._console.print(line)
-            else:
-                self._console.print(line)
+        return Group(*items)
+
+    def _start_live(self):
+        """启动 Live 渲染。"""
+        if self._live is None:
+            self._live = Live(
+                Text(""),
+                console=self._console,
+                refresh_per_second=10,
+                transient=True,  # 停止后自动收回
+            )
+            self._live.start()
+
+    def _update_render(
+        self,
+        question: str,
+        labels: list[str],
+        cursor_idx: int,
+        selected_indices: set[int],
+        allow_multiple: bool,
+    ):
+        """更新 Rich Live 渲染内容。"""
+        if self._live is not None:
+            renderable = self._build_renderable(question, labels, cursor_idx, selected_indices, allow_multiple)
+            self._live.update(renderable, refresh=True)
+
+    def _stop_live(self):
+        """停止 Live 渲染。"""
+        if self._live is not None:
+            try:
+                self._live.stop()
+            except Exception:
+                pass
+            finally:
+                self._live = None
 
     def _get_key(self) -> str:
         """跨平台阻塞获取按键。"""
@@ -168,14 +201,3 @@ class CliSelectorAdapter:
 
     def _is_tty(self) -> bool:
         return sys.stdout.isatty() and sys.stdin.isatty()
-
-    def _clear_lines(self, count: int):
-        """清除指定行数的输出。"""
-        if count <= 0:
-            return
-        # 上移并清空
-        sys.stdout.write(f'\x1b[{count}A\r')
-        for _ in range(count):
-            sys.stdout.write('\x1b[K\n')
-        sys.stdout.write(f'\x1b[{count}A\r')
-        sys.stdout.flush()

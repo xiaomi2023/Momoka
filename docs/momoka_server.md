@@ -40,7 +40,7 @@ server/servers/<name>/
 Data class representing tool execution results:
 
 - `text`: str — Text content returned to the model
-- `file_contents`: dict[str, str] | None — Processed data information {file_key: content}
+- `file_contents`: dict[str, str] | None — Processed data information ({file_key: content})
 - `is_finish`: bool — Whether to end the task (default is False)
 - `log_msg`: str | list[tuple[str, str]] | None — Log message provided to the user
 - `log_role`: str | None — Log type
@@ -58,8 +58,9 @@ Data class used to register Momoka Server modules:
 
 - `name`: str — Module name
 - `tool_definitions`: list[dict] — List of tool definitions (JSON Schema)
-- `handler`: Callable — Handler function with signature `(str, dict, ToolContext) -> ToolResult`
-- `condition`: Callable[[], bool] | one — Availability check function
+- `handler`: Callable | None — Handler function with signature `(str, dict, ToolContext) -> ToolResult` (optional, mutually exclusive with `handlers`)
+- `handlers`: dict[str, Callable] | None — Dictionary mapping tool names to handler functions with signature `(dict, ToolContext) -> ToolResult` (recommended, mutually exclusive with `handler`)
+- `condition`: Callable[[], bool] | None — Availability check function
 
 ### Momoka Server Registration API
 
@@ -71,6 +72,56 @@ Can be imported from `server.servers`:
 - `get_available_tools() -> list[dict]` — Get all available tool definitions
 - `dispatch_tool(name: str, args: dict, ctx: ToolContext) -> ToolResult | None` — Dispatch tool calls to the corresponding Server
 - `clear_registrations()` — Clear all registrations
+
+## Registration Methods
+
+### Method 1: Using handlers Dictionary (Recommended)
+
+Provide a mapping from tool names to handler functions:
+
+```python
+from server.servers import ServerRegistration, register_server
+from server.servers.my_module.tooldef import TOOL_DEFINITIONS
+from server.servers.my_module import my_module as handler
+
+register_server(ServerRegistration(
+    name='my_module',
+    tool_definitions=TOOL_DEFINITIONS,
+    handlers={
+        'my_tool': handler.my_tool,
+        'another_tool': handler.another_tool,
+    },
+))
+```
+
+Handler function signature: `func(args: dict, ctx: ToolContext) -> ToolResult`
+
+### Method 2: Using Custom Handler Function
+
+If you need more complex dispatch logic, you can define a custom handler function:
+
+```python
+from server import ToolResult, UnknownToolError
+from server.servers import ServerRegistration, register_server
+from server.servers.my_module.tooldef import TOOL_DEFINITIONS
+from server.servers.my_module import my_module as handler
+
+def _handle(name: str, args: dict, ctx) -> ToolResult:
+    """Dispatch tool calls to specific handlers."""
+    match name:
+        case 'my_tool':
+            return handler.my_tool(args, ctx)
+        case 'another_tool':
+            return handler.another_tool(args, ctx)
+        case _:
+            raise UnknownToolError(name)  # Unified exception, will be converted to "Unknown Tool"
+
+register_server(ServerRegistration(
+    name='my_module',
+    tool_definitions=TOOL_DEFINITIONS,
+    handler=_handle,
+))
+```
 
 ## Advanced Features
 
@@ -200,26 +251,17 @@ Provides basic mathematical operation functionality
 
 from __future__ import annotations
 
-from server import ToolResult
 from server.servers import ServerRegistration, register_server
 from server.servers.calculator.tooldef import TOOL_DEFINITIONS, is_available
 from server.servers.calculator import calculator as handler
 
 
-def _handle(name: str, args: dict, ctx) -> ToolResult:
-    """Dispatch tool calls to specific handlers"""
-    match name:
-        case 'calculator':
-            return handler.calculator(args, ctx)
-        case _:
-            return ToolResult(text=f'Unknown tool: {name}')
-
-
-# Auto-register module
 register_server(ServerRegistration(
     name='calculator',
     tool_definitions=TOOL_DEFINITIONS,
-    handler=_handle,
+    handlers={
+        'calculator': handler.calculator,
+    },
     condition=is_available,
 ))
 ```

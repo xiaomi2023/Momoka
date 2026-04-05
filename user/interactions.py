@@ -55,7 +55,7 @@ class AskUser:
             return '(NULL)'
 
         callbacks.render_question(self.question)
-        reply = callbacks.get_input('>> ')
+        reply = callbacks.get_input('-> ')
 
         return reply if reply else '(NULL)'
 

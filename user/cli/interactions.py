@@ -36,7 +36,7 @@ class CliInteractionAdapter:
     def _render_question(self, question: str):
         """渲染问题到终端。"""
         if question:
-            self._console.print(question)
+            self._console.print(Text(question, style='plum1'))
 
     def _get_input(self, prompt: str) -> str:
         """从终端获取用户输入。"""
@@ -63,11 +63,11 @@ class CliInteractionAdapter:
             status = task.get('status', 'pending')
             title = task.get('title', 'Unnamed task')
             if status == 'done':
-                text_lines.append(f'  ✓ {i}. {title}')
+                text_lines.append(f'✓ {i}. {title}')
             elif status == 'in_progress':
-                text_lines.append(f'  → {i}. {title}')
+                text_lines.append(f'→ {i}. {title}')
             else:
-                text_lines.append(f'  ○ {i}. {title}')
+                text_lines.append(f'○ {i}. {title}')
 
         # 渲染到终端（带 Rich 样式）
         self._console.print(Text('TODO:', style='bright_cyan'))

@@ -10,9 +10,11 @@ import threading
 import time
 
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.status import Status
 from rich.text import Text
+from rich.theme import Theme
 
 from logger import log, new_log
 from user.user import BaseUser
@@ -20,6 +22,29 @@ from user.cli.util import handle_slash, multiline_input
 from user.cli.system_monitor import SystemConfigMonitor
 
 _spinner_console = Console(highlight=False)
+
+# Markdown 渲染用的自定义主题
+_MARKDOWN_THEME = Theme({
+    "markdown.text": "bright_white",
+    # 标题层级样式
+    "markdown.h1": "bright_white bold underline",
+    "markdown.h2": "white bold underline",
+    "markdown.h3": "bold",
+    "markdown.h4": "bold",
+    "markdown.h5": "bold",
+    "markdown.h6": "dim italic",
+    "markdown.code": "green",
+    "markdown.code_block": "green",
+    "markdown.block_quote": "dim italic",
+    "markdown.list_item": "cyan",
+    "markdown.strong": "plum1",
+    "markdown.emph": "italic",
+    "markdown.link": "blue underline",
+    "markdown.hr": "dim",
+})
+
+# Markdown 渲染专用 Console
+_console_md = Console(theme=_MARKDOWN_THEME, highlight=False)
 
 # role → rich 颜色映射（BOT 不染色）
 _ROLE_COLORS: dict[str, str] = {
@@ -157,7 +182,7 @@ class CLIUser(BaseUser):
         try:
             _con = Console(highlight=False)
             _footer = "\n" + " " * 19 + 'Welcome back! This is Momoka~\n'
-            pink_title = Text(TITLE.strip(), style='pink3')
+            pink_title = Text(TITLE.strip(), style='plum1')
             _con.print(Panel(
                 pink_title + '\n' + _footer,
                 border_style='bright_cyan', padding=(0, 2), expand=False,
@@ -262,6 +287,12 @@ class CLIUser(BaseUser):
         if role in get_config().get('mute_log', []):
             return
 
+        # BOT 角色使用 Markdown 渲染
+        if role == 'BOT':
+            md = Markdown(message)
+            _console_md.print(md, end=end)
+            return
+
         # Rich 染色输出
         if role in _ROLE_COLORS:
             color = _ROLE_COLORS[role]
@@ -269,7 +300,7 @@ class CLIUser(BaseUser):
                      + message, style=color)
             self._console.print(t, end=end)
         else:
-            # BOT 等角色直接打印
+            # 其他角色直接打印
             print(message, end=end)
 
     def on_task_finish(self) -> None:

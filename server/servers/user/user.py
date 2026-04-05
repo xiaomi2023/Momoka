@@ -40,7 +40,7 @@ def ask_user(args: dict, ctx: ToolContext) -> ToolResult:
 
     return ToolResult(
         text=text,
-        log_msg=question,
+        log_msg=None,  # 问题已通过 callbacks.render_question 打印，不需要重复日志
         log_role='QUESTION',
     )
 
