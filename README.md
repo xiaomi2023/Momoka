@@ -4,6 +4,7 @@
   <p>"ふふ、待ってたよ~"</p>
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+    <img src="https://img.shields.io/github/last-commit/xiaomi2023/Momoka" alt="Last Commit">
   </p>
 </div>
 
