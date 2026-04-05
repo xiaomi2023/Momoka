@@ -188,7 +188,7 @@ def system_command(args: dict, ctx: ToolContext) -> ToolResult:
     command = args.get('command', '')
     inputs = args.get('inputs')
 
-    input_log = f'Shell Input: {command}'
+    input_log = f'\nShell Input: {command}'
     if inputs is not None:
         input_log += f' | input={str(inputs).split()}'
     input_log += '\n'
