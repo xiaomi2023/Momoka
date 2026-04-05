@@ -172,6 +172,19 @@ class CLIUser(BaseUser):
         self._start_time = 0.0
         self._console = Console(highlight=False)
         self._system_monitor: SystemConfigMonitor | None = None
+        self._set_terminal_title()
+
+    def _set_terminal_title(self) -> None:
+        """设置终端窗口标题为 Momoka。"""
+        try:
+            if sys.platform == 'win32':
+                import ctypes
+                ctypes.windll.kernel32.SetConsoleTitleW("Momoka")
+            else:
+                # Unix/Linux/Mac 使用 ANSI 转义序列
+                print("\033]0;Momoka\007", end="", flush=True)
+        except Exception:
+            pass  # 如果设置标题失败，不影响程序运行
 
     def set_agent(self, agent):
         """设置关联的 Agent 实例。"""
