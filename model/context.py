@@ -52,6 +52,35 @@ class Context:
 
     # ── History 写入 ──────────────────────────────────────────────────────
 
+    def insert_preset_conversations(self, conversations: list[dict]):
+        """在 system 提示词后插入预设对话。
+
+        Args:
+            conversations: 对话列表，每个元素为 {'role': 'user'|'assistant', 'content': str}
+                          或 assistant 的 tool_calls 格式。
+        """
+        if not conversations:
+            return
+
+        insert_position = 1  # system 消息之后
+        for conv in conversations:
+            role = conv.get('role')
+            if role == 'user':
+                self.history.insert(insert_position, {'role': 'user', 'content': conv['content']})
+                self._meta.insert(insert_position, {'file_contents': {}})
+                insert_position += 1
+            elif role == 'assistant':
+                assistant_msg = {'role': 'assistant', 'content': conv.get('content', '')}
+                if 'tool_calls' in conv:
+                    assistant_msg['tool_calls'] = conv['tool_calls']
+                self.history.insert(insert_position, assistant_msg)
+                self._meta.insert(insert_position, {})
+                insert_position += 1
+            else:
+                log(f'context.insert_preset_conversations | 跳过不支持的角色: {role}')
+
+        log(f'context.insert_preset_conversations | 插入 {len(conversations)} 条预设对话')
+
     def append_user(self, message: str, file_contents: dict[str, str] | None = None):
         """追加一条 user 消息到历史。"""
         self.history.append({'role': 'user', 'content': message})

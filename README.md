@@ -64,22 +64,17 @@ python main.py
 
 ### 配置
 
-运行后，在控制台输入以下命令以配置模型API的Base Url和API Key，以及Momoka的工作目录：
+运行后，输入以下命令以配置模型 API 的 Base Url 和 API Key，以及 Momoka 的工作目录：
 ```bash
 /set base_url https://api.XXX.com
 /set api_key sk-***
 /set work_dir "C:\\Users\\..."
 ```
-输入 **/model** 选择模型，并发送测试信息确保一切就绪。  
-可以通过 **/help** 命令获取帮助，或 **/set** 命令获取更多参数信息。
+然后输入 **/model** 以选择模型。  
+发送测试信息确保一切就绪后，就可以与 Momoka 对话或要求 Momoka 执行任务。
 
-## 🔧 Skill
-**Skill** 是一种模块化、可复用的指令与工具包，可以拓展模型的能力或让模型掌握更多知识。  
-通过在\skill目录中添加包含 **SKILL.md** 和资源文件（可选）的Skill文件夹来配置Skill。Skill可以通过Agent动态加载，也可通过命令 **/[Skill name]** 手动加载Skill。  
-更多信息，请参考[这里](https://platform.claude.com/docs/zh-CN/agents-and-tools/agent-skills/)。
+## 📄 更多信息
+[Momoka 文档](https://xiaomi2023.github.io/Momoka/)
 
-## More Information
-[Documentation](https://xiaomi2023.github.io/Momoka/)
-
-## 📄 License
+## License
 This repository is licensed under the [Apache License 2.0](LICENSE).

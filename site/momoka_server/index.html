@@ -18,6 +18,8 @@
         <link rel="prev" href="../headless/">
       
       
+        <link rel="next" href="../mcp_integration/">
+      
       
         
       
@@ -288,6 +290,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../command/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Commands
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../headless/" class="md-tabs__link">
         
   
@@ -316,6 +337,44 @@
     
   
   Momoka Server
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../mcp_integration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Integration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../skill/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Skill
 
       </a>
     </li>
@@ -455,6 +514,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../command/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../headless/" class="md-nav__link">
         
   
@@ -542,10 +628,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#table" class="md-nav__link">
+  <a href="#table-of-contents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Table
+        Table of Contents
       
     </span>
   </a>
@@ -553,10 +639,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-server-architecture" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Server Architecture
+        Overview
       
     </span>
   </a>
@@ -564,10 +650,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-server-module-structure" class="md-nav__link">
+  <a href="#module-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Server Module Structure
+        Module Structure
       
     </span>
   </a>
@@ -575,22 +661,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-creating-custom-server-modules" class="md-nav__link">
+  <a href="#core-components" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Creating Custom Server Modules
+        Core Components
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3. Creating Custom Server Modules">
+    <nav class="md-nav" aria-label="Core Components">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#writing-tool-definitions-tooldefpy" class="md-nav__link">
+  <a href="#toolresult" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing Tool Definitions (tooldef.py)
+        ToolResult
       
     </span>
   </a>
@@ -598,10 +684,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#writing-tool-handlers-handlerpy" class="md-nav__link">
+  <a href="#toolcontext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing Tool Handlers (handler.py)
+        ToolContext
       
     </span>
   </a>
@@ -609,10 +695,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#exporting-module-interface-initpy" class="md-nav__link">
+  <a href="#serverregistration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Exporting Module Interface initpy
+        ServerRegistration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#momoka-server-registration-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Momoka Server Registration API
       
     </span>
   </a>
@@ -625,22 +722,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-registering-custom-servers" class="md-nav__link">
+  <a href="#registration-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Registering Custom Servers
+        Registration Methods
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="4. Registering Custom Servers">
+    <nav class="md-nav" aria-label="Registration Methods">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#41-registering-in-tool_registrypy" class="md-nav__link">
+  <a href="#method-1-using-handlers-dictionary-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.1 Registering in tool_registry.py
+        Method 1: Using handlers Dictionary (Recommended)
       
     </span>
   </a>
@@ -648,10 +745,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#42-adding-routes-in-routerpy" class="md-nav__link">
+  <a href="#method-2-using-custom-handler-function" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.2 Adding Routes in router.py
+        Method 2: Using Custom Handler Function
       
     </span>
   </a>
@@ -664,22 +761,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-data-class-descriptions" class="md-nav__link">
+  <a href="#advanced-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Data Class Descriptions
+        Advanced Features
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="5. Data Class Descriptions">
+    <nav class="md-nav" aria-label="Advanced Features">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#51-toolresult" class="md-nav__link">
+  <a href="#conditional-tool-availability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.1 ToolResult
+        Conditional Tool Availability
       
     </span>
   </a>
@@ -687,10 +784,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#52-toolcontext" class="md-nav__link">
+  <a href="#context-folding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.2 ToolContext
+        Context Folding
       
     </span>
   </a>
@@ -703,50 +800,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-tool-handler-writing-specifications" class="md-nav__link">
+  <a href="#example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Tool Handler Writing Specifications
+        Example
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="6. Tool Handler Writing Specifications">
+    <nav class="md-nav" aria-label="Example">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#61-function-signature" class="md-nav__link">
+  <a href="#directory-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6.1 Function Signature
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-advanced-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Advanced Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="7. Advanced Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#71-conditional-availability-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7.1 Conditional Availability Tools
+        Directory Structure
       
     </span>
   </a>
@@ -754,10 +823,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#72-file-content-injection-and-history-folding" class="md-nav__link">
+  <a href="#1-tooldefpy-define-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.2 File Content Injection and History Folding
+        1. tooldef.py - Define Tools
       
     </span>
   </a>
@@ -765,10 +834,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#73-dynamic-tool-registration" class="md-nav__link">
+  <a href="#2-calculatorpy-implement-tool-handlers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.3 Dynamic Tool Registration
+        2. calculator.py - Implement Tool Handlers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-initpy-register-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. init.py - Register Module
       
     </span>
   </a>
@@ -784,6 +864,60 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skill/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skill
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -815,10 +949,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#table" class="md-nav__link">
+  <a href="#table-of-contents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Table
+        Table of Contents
       
     </span>
   </a>
@@ -826,10 +960,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-server-architecture" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Server Architecture
+        Overview
       
     </span>
   </a>
@@ -837,10 +971,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-server-module-structure" class="md-nav__link">
+  <a href="#module-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Server Module Structure
+        Module Structure
       
     </span>
   </a>
@@ -848,22 +982,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-creating-custom-server-modules" class="md-nav__link">
+  <a href="#core-components" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Creating Custom Server Modules
+        Core Components
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3. Creating Custom Server Modules">
+    <nav class="md-nav" aria-label="Core Components">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#writing-tool-definitions-tooldefpy" class="md-nav__link">
+  <a href="#toolresult" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing Tool Definitions (tooldef.py)
+        ToolResult
       
     </span>
   </a>
@@ -871,10 +1005,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#writing-tool-handlers-handlerpy" class="md-nav__link">
+  <a href="#toolcontext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing Tool Handlers (handler.py)
+        ToolContext
       
     </span>
   </a>
@@ -882,10 +1016,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#exporting-module-interface-initpy" class="md-nav__link">
+  <a href="#serverregistration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Exporting Module Interface initpy
+        ServerRegistration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#momoka-server-registration-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Momoka Server Registration API
       
     </span>
   </a>
@@ -898,22 +1043,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-registering-custom-servers" class="md-nav__link">
+  <a href="#registration-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Registering Custom Servers
+        Registration Methods
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="4. Registering Custom Servers">
+    <nav class="md-nav" aria-label="Registration Methods">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#41-registering-in-tool_registrypy" class="md-nav__link">
+  <a href="#method-1-using-handlers-dictionary-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.1 Registering in tool_registry.py
+        Method 1: Using handlers Dictionary (Recommended)
       
     </span>
   </a>
@@ -921,10 +1066,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#42-adding-routes-in-routerpy" class="md-nav__link">
+  <a href="#method-2-using-custom-handler-function" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4.2 Adding Routes in router.py
+        Method 2: Using Custom Handler Function
       
     </span>
   </a>
@@ -937,22 +1082,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-data-class-descriptions" class="md-nav__link">
+  <a href="#advanced-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Data Class Descriptions
+        Advanced Features
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="5. Data Class Descriptions">
+    <nav class="md-nav" aria-label="Advanced Features">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#51-toolresult" class="md-nav__link">
+  <a href="#conditional-tool-availability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.1 ToolResult
+        Conditional Tool Availability
       
     </span>
   </a>
@@ -960,10 +1105,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#52-toolcontext" class="md-nav__link">
+  <a href="#context-folding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.2 ToolContext
+        Context Folding
       
     </span>
   </a>
@@ -976,50 +1121,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-tool-handler-writing-specifications" class="md-nav__link">
+  <a href="#example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Tool Handler Writing Specifications
+        Example
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="6. Tool Handler Writing Specifications">
+    <nav class="md-nav" aria-label="Example">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#61-function-signature" class="md-nav__link">
+  <a href="#directory-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6.1 Function Signature
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-advanced-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Advanced Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="7. Advanced Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#71-conditional-availability-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7.1 Conditional Availability Tools
+        Directory Structure
       
     </span>
   </a>
@@ -1027,10 +1144,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#72-file-content-injection-and-history-folding" class="md-nav__link">
+  <a href="#1-tooldefpy-define-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.2 File Content Injection and History Folding
+        1. tooldef.py - Define Tools
       
     </span>
   </a>
@@ -1038,10 +1155,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#73-dynamic-tool-registration" class="md-nav__link">
+  <a href="#2-calculatorpy-implement-tool-handlers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.3 Dynamic Tool Registration
+        2. calculator.py - Implement Tool Handlers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-initpy-register-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. init.py - Register Module
       
     </span>
   </a>
@@ -1073,248 +1201,236 @@
   
 
 
-<h1 id="momoka-server-beta">Momoka Server (BETA)</h1>
-<p>Momoka Server is the way Momoka interacts with external data sources and tools.
-Through tool services, context management, and other features,
-it enables Momoka to connect and interact with external services.</p>
-<hr />
-<h2 id="table">Table</h2>
+<h1 id="momoka-server-beta">Momoka Server (Beta)</h1>
+<h3 id="table-of-contents">Table of Contents</h3>
 <ul>
-<li><a href="#1-server-architecture">1. Server Architecture</a></li>
-<li><a href="#2-server-module-structure">2. Server Module Structure</a></li>
-<li><a href="#3-creating-custom-server-modules">3. Creating Custom Server Modules</a></li>
-<li><a href="#writing-tool-definitions-tooldefpy">Writing Tool Definitions (tooldef.py)</a></li>
-<li><a href="#writing-tool-handlers-handlerpy">Writing Tool Handlers (handler.py)</a></li>
-<li><a href="#exporting-module-interface-initpy">Exporting Module Interface (<strong>init</strong>.py)</a></li>
-<li><a href="#4-registering-custom-servers">4. Registering Custom Servers</a></li>
-<li><a href="#41-registering-in-tool_registrypy">4.1 Registering in tool_registry.py</a></li>
-<li><a href="#42-adding-routes-in-routerpy">4.2 Adding Routes in router.py</a></li>
-<li><a href="#5-data-class-descriptions">5. Data Class Descriptions</a></li>
-<li><a href="#51-toolresult">5.1 ToolResult</a></li>
-<li><a href="#52-toolcontext">5.2 ToolContext</a></li>
-<li><a href="#6-tool-handler-writing-specifications">6. Tool Handler Writing Specifications</a></li>
-<li><a href="#61-function-signature">6.1 Function Signature</a></li>
-<li><a href="#7-advanced-features">7. Advanced Features</a></li>
-<li><a href="#71-conditional-availability-tools">7.1 Conditional Availability Tools</a></li>
-<li><a href="#72-file-content-injection-and-history-folding">7.2 File Content Injection and History Folding</a></li>
-<li><a href="#73-dynamic-tool-registration">7.3 Dynamic Tool Registration</a></li>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#momoka-server-module-structure">Momoka Server Module Structure</a></li>
+<li><a href="#core-components">Core Components</a></li>
+<li><a href="#toolresult">ToolResult</a></li>
+<li><a href="#toolcontext">ToolContext</a></li>
+<li><a href="#serverregistration">ServerRegistration</a></li>
+<li><a href="#momoka-server-registration-api">Momoka Server Registration API</a></li>
+<li><a href="#advanced-features">Advanced Features</a></li>
+<li><a href="#conditional-tool-availability">Conditional Tool Availability</a></li>
+<li><a href="#context-folding">Context Folding</a></li>
+<li><a href="#example">Example</a></li>
+<li><a href="#directory-structure">Directory Structure</a></li>
+<li><a href="#1-tooldefpy---define-tools">1. tooldef.py - Define Tools</a></li>
+<li><a href="#2-calculatorpy---implement-tool-handlers">2. calculator.py - Implement Tool Handlers</a></li>
+<li><a href="#3-__init__py---register-module">3. <strong>init</strong>.py - Register Module</a></li>
 </ul>
-<hr />
-<h2 id="1-server-architecture">1. Server Architecture</h2>
-<p>Momoka's Server layer adopts a tool registration + routing dispatch architecture.</p>
-<p><strong>Core Components:</strong>
-- <code>tool_registry.py</code>: Tool registration center, collects tool definitions from each module and generates the available tool list
-- <code>router.py</code>: Tool routing dispatcher, dispatches tool_calls to corresponding handlers, and uniformly handles logging and history
-- <code>servers/&lt;name&gt;/</code>: Tool module directories.</p>
-<hr />
-<h2 id="2-server-module-structure">2. Server Module Structure</h2>
-<p>Each Server module is an independent Python package with the following standard structure:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>server/servers/&lt;name&gt;/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── __init__.py          # Module export interface
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── handler.py           # Tool handler implementation
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└── tooldef.py           # Tool definitions
+<h2 id="overview">Overview</h2>
+<p>Momoka Server is the way Momoka interacts with external data sources and tools. By creating custom Momoka Servers and leveraging features like tool services and context management, you can enable Momoka to connect and interact with external services.</p>
+<h2 id="module-structure">Module Structure</h2>
+<p>Momoka Server modules are placed in <code>/server/servers</code>. Each module should contain an <code>__init__.py</code> file to register fields like Tool Definitions, Handlers, etc.</p>
+<p>Momoka provides the Tool Definitions to the model, enabling it to call them as needed. After the model makes a tool call, Momoka processes it using the corresponding Handler and can return execution results to the model/user.</p>
+<h2 id="core-components">Core Components</h2>
+<h3 id="toolresult">ToolResult</h3>
+<p>A data class representing the execution result of a tool:</p>
+<ul>
+<li><code>text</code>: str — Text content returned to the model</li>
+<li><code>file_contents</code>: dict[str, str] | None — Processed file information ({file_key: content})</li>
+<li><code>is_finish</code>: bool — Whether to end the task (default: False)</li>
+<li><code>log_msg</code>: str | list[tuple[str, str]] | None — Log message for the user</li>
+<li><code>log_role</code>: str | None — Log role/type</li>
+</ul>
+<h3 id="toolcontext">ToolContext</h3>
+<p>A read-only context object passed to all tool handlers:</p>
+<ul>
+<li><code>cfg</code>: dict — Configuration dictionary</li>
+<li><code>input_func</code>: Callable | None — Input function</li>
+</ul>
+<h3 id="serverregistration">ServerRegistration</h3>
+<p>A data class for registering Momoka Server modules:</p>
+<ul>
+<li><code>name</code>: str — Module name</li>
+<li><code>tool_definitions</code>: list[dict] — List of tool definitions (JSON Schema)</li>
+<li><code>handler</code>: Callable | None — Handler function with signature <code>(str, dict, ToolContext) -&gt; ToolResult</code> (optional, mutually exclusive with <code>handlers</code>)</li>
+<li><code>handlers</code>: dict[str, Callable] | None — Dictionary mapping tool names to handler functions with signature <code>(dict, ToolContext) -&gt; ToolResult</code> (recommended, mutually exclusive with <code>handler</code>)</li>
+<li><code>condition</code>: Callable[[], bool] | None — Availability check function</li>
+</ul>
+<h3 id="momoka-server-registration-api">Momoka Server Registration API</h3>
+<p>Importable from <code>server.servers</code>:</p>
+<ul>
+<li><code>register_server(reg: ServerRegistration)</code> — Register a Server module</li>
+<li><code>get_registered_servers() -&gt; dict[str, ServerRegistration]</code> — Get all registered Servers</li>
+<li><code>get_server(name: str) -&gt; ServerRegistration | None</code> — Get a specific Server by name</li>
+<li><code>get_available_tools() -&gt; list[dict]</code> — Get all available tool definitions</li>
+<li><code>dispatch_tool(name: str, args: dict, ctx: ToolContext) -&gt; ToolResult | None</code> — Dispatch a tool call to the corresponding Server</li>
+<li><code>clear_registrations()</code> — Clear all registrations</li>
+</ul>
+<h2 id="registration-methods">Registration Methods</h2>
+<h3 id="method-1-using-handlers-dictionary-recommended">Method 1: Using handlers Dictionary (Recommended)</h3>
+<p>Provide a mapping of tool names to handler functions:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServerRegistration</span><span class="p">,</span> <span class="n">register_server</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.my_module.tooldef</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOL_DEFINITIONS</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.my_module</span><span class="w"> </span><span class="kn">import</span> <span class="n">my_module</span> <span class="k">as</span> <span class="n">handler</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">register_server</span><span class="p">(</span><span class="n">ServerRegistration</span><span class="p">(</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_module&#39;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">tool_definitions</span><span class="o">=</span><span class="n">TOOL_DEFINITIONS</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">handlers</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="s1">&#39;my_tool&#39;</span><span class="p">:</span> <span class="n">handler</span><span class="o">.</span><span class="n">my_tool</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="s1">&#39;another_tool&#39;</span><span class="p">:</span> <span class="n">handler</span><span class="o">.</span><span class="n">another_tool</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="p">},</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">))</span>
 </span></code></pre></div>
-<hr />
-<h2 id="3-creating-custom-server-modules">3. Creating Custom Server Modules</h2>
-<h3 id="writing-tool-definitions-tooldefpy">Writing Tool Definitions (tooldef.py)</h3>
-<p><code>tooldef.py</code> is used to define the JSON Schema of tools. Momoka uses these definitions to understand the functionality and parameters of tools.</p>
-<p><strong>Basic Template:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="sd">server/servers/weather/tooldef.py — Weather query tool definitions.</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># ── Tool Definitions ─────────────────────────────────────────────────────────</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">TOOL_DEFINITIONS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="p">{</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;function&#39;</span><span class="p">,</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="s1">&#39;function&#39;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;get_weather&#39;</span><span class="p">,</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>            <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;Query the current weather for a specified city.&#39;</span><span class="p">,</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>            <span class="s1">&#39;parameters&#39;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;object&#39;</span><span class="p">,</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>                <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>                    <span class="c1"># properties...</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>                <span class="p">},</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>                <span class="s1">&#39;required&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">],</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>            <span class="p">},</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>        <span class="p">},</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="p">},</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="p">]</span>
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="c1"># ── Availability Check ───────────────────────────────────────────────────────</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_available</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Weather tool is always available.&quot;&quot;&quot;</span>
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>    <span class="k">return</span> <span class="kc">True</span>
+<p>Handler function signature: <code>func(args: dict, ctx: ToolContext) -&gt; ToolResult</code></p>
+<h3 id="method-2-using-custom-handler-function">Method 2: Using Custom Handler Function</h3>
+<p>If you need more complex dispatch logic, you can create a custom handler function:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolResult</span><span class="p">,</span> <span class="n">UnknownToolError</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServerRegistration</span><span class="p">,</span> <span class="n">register_server</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.my_module.tooldef</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOL_DEFINITIONS</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.my_module</span><span class="w"> </span><span class="kn">import</span> <span class="n">my_module</span> <span class="k">as</span> <span class="n">handler</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">_handle</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Dispatch tool calls to specific handlers.&quot;&quot;&quot;</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="k">match</span> <span class="n">name</span><span class="p">:</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="k">case</span> <span class="s1">&#39;my_tool&#39;</span><span class="p">:</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>            <span class="k">return</span> <span class="n">handler</span><span class="o">.</span><span class="n">my_tool</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="k">case</span> <span class="s1">&#39;another_tool&#39;</span><span class="p">:</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>            <span class="k">return</span> <span class="n">handler</span><span class="o">.</span><span class="n">another_tool</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>            <span class="k">raise</span> <span class="n">UnknownToolError</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>  <span class="c1"># Unified exception, will be converted to &quot;Unknown Tool&quot;</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">register_server</span><span class="p">(</span><span class="n">ServerRegistration</span><span class="p">(</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_module&#39;</span><span class="p">,</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">tool_definitions</span><span class="o">=</span><span class="n">TOOL_DEFINITIONS</span><span class="p">,</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">handler</span><span class="o">=</span><span class="n">_handle</span><span class="p">,</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="p">))</span>
 </span></code></pre></div>
-<h3 id="writing-tool-handlers-handlerpy">Writing Tool Handlers (handler.py)</h3>
-<p><code>handler.py</code> implements the actual execution logic of tools, receives parameters, and returns <code>ToolResult</code>.</p>
-<p><strong>Basic Template:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="sd">server/servers/weather/handler.py — Weather query tool handler.</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolResult</span><span class="p">,</span> <span class="n">ToolContext</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_weather</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ToolContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Weather query tool handler.</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="sd">    Args:</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="sd">        args: Tool parameters, e.g., {&#39;city&#39;: &#39;Beijing&#39;, &#39;unit&#39;: &#39;celsius&#39;}</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="sd">        ctx: Execution context, containing configuration and other information</span>
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="sd">    Returns:</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="sd">        ToolResult: Execution result</span>
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    <span class="n">city</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;city&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    <span class="n">unit</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unit&#39;</span><span class="p">,</span> <span class="s1">&#39;celsius&#39;</span><span class="p">)</span>
-</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
-</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>    <span class="c1"># ── Actual Business Logic ─────────────────────────────</span>
-</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>    <span class="c1"># Here you can call external APIs, read files, execute commands, etc.</span>
-</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>    <span class="c1"># Example: Simulating weather data</span>
-</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>    <span class="n">temperature</span> <span class="o">=</span> <span class="mi">25</span> <span class="k">if</span> <span class="n">unit</span> <span class="o">==</span> <span class="s1">&#39;celsius&#39;</span> <span class="k">else</span> <span class="mi">77</span>
-</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>    <span class="n">weather_desc</span> <span class="o">=</span> <span class="s1">&#39;Partly Cloudy&#39;</span>
-</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>    <span class="n">result_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s1"> current weather: </span><span class="si">{</span><span class="n">weather_desc</span><span class="si">}</span><span class="s1">, temperature </span><span class="si">{</span><span class="n">temperature</span><span class="si">}</span><span class="s1">°</span><span class="si">{</span><span class="n">unit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span>
-</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>    <span class="c1"># ──────────────────────────────────────────────────────</span>
-</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a>
-</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a>    <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span>
-</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>        <span class="n">text</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;&lt;</span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s1"> weather query successful&gt;&#39;</span><span class="p">,</span>
-</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a>        <span class="n">log_msg</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Weather Query: </span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s1"> → </span><span class="si">{</span><span class="n">result_text</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>        <span class="n">log_role</span><span class="o">=</span><span class="s1">&#39;TOOL&#39;</span><span class="p">,</span>
-</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a>    <span class="p">)</span>
+<h2 id="advanced-features">Advanced Features</h2>
+<h3 id="conditional-tool-availability">Conditional Tool Availability</h3>
+<p>Using the <code>condition</code> parameter of <code>ServerRegistration</code>, you can specify a function that returns a <code>bool</code> to control tool availability. When <code>condition</code> returns <code>False</code>, all tools from that Momoka Server will not appear in the list returned by <code>get_available_tools()</code>, preventing Momoka from calling them.</p>
+<h3 id="context-folding">Context Folding</h3>
+<p>To reduce context window usage, Momoka supports automatic folding of historical data content. Each time a file is read, the <code>file_contents</code> field of <code>ToolResult</code> records the filename and content. When the same file is read multiple times or after a task round completes, the file content in the context will be replaced with a placeholder, keeping only the most recent content.</p>
+<h2 id="example">Example</h2>
+<p>Here's an example of a custom Momoka Server, demonstrating how to create a simple calculator tool:</p>
+<h3 id="directory-structure">Directory Structure</h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>server/servers/calculator/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── __init__.py      # Module registration
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── calculator.py    # Tool handler implementation
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└── tooldef.py       # Tool definition (JSON Schema)
 </span></code></pre></div>
-<h3 id="exporting-module-interface-initpy">Exporting Module Interface initpy</h3>
-<p><code>__init__.py</code> exports the public interface of the module:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="sd">&quot;&quot;&quot;Weather server package.&quot;&quot;&quot;</span>
+<h3 id="1-tooldefpy-define-tools">1. tooldef.py - Define Tools</h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="sd">&quot;&quot;&quot;Calculator tool definitions&quot;&quot;&quot;</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.weather.handler</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_weather</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.weather.tooldef</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOL_DEFINITIONS</span><span class="p">,</span> <span class="n">is_available</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;get_weather&#39;</span><span class="p">,</span> <span class="s1">&#39;TOOL_DEFINITIONS&#39;</span><span class="p">,</span> <span class="s1">&#39;is_available&#39;</span><span class="p">]</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">TOOL_DEFINITIONS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="p">{</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;function&#39;</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>        <span class="s1">&#39;function&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;calculator&#39;</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>            <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;Perform basic mathematical operations (add, subtract, multiply, divide)&#39;</span><span class="p">,</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>            <span class="s1">&#39;parameters&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;object&#39;</span><span class="p">,</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>                <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>                    <span class="s1">&#39;operation&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>                        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>                        <span class="s1">&#39;enum&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="s1">&#39;subtract&#39;</span><span class="p">,</span> <span class="s1">&#39;multiply&#39;</span><span class="p">,</span> <span class="s1">&#39;divide&#39;</span><span class="p">],</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>                        <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;Operation type: add, subtract, multiply, or divide&#39;</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>                    <span class="p">},</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>                    <span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>                        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span><span class="p">,</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>                        <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;First number&#39;</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>                    <span class="p">},</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>                    <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>                        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span><span class="p">,</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>                        <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;Second number&#39;</span>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>                    <span class="p">}</span>
+</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>                <span class="p">},</span>
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>                <span class="s1">&#39;required&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;operation&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">]</span>
+</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>            <span class="p">}</span>
+</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>        <span class="p">}</span>
+</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>    <span class="p">}</span>
+</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="p">]</span>
+</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>
+</span><span id="__span-3-32"><a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>
+</span><span id="__span-3-33"><a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_available</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="__span-3-34"><a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if the calculator tool is available (always available)&quot;&quot;&quot;</span>
+</span><span id="__span-3-35"><a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>    <span class="k">return</span> <span class="kc">True</span>
 </span></code></pre></div>
-<hr />
-<h2 id="4-registering-custom-servers">4. Registering Custom Servers</h2>
-<p>After creating the module, you need to register it in the tool registry and router before Momoka can call it.</p>
-<h3 id="41-registering-in-tool_registrypy">4.1 Registering in tool_registry.py</h3>
-<p>Edit <code>server/tool_registry.py</code> and add the module to the <code>_SERVER_REGISTRATIONS</code> list:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">_SERVER_REGISTRATIONS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="c1"># Existing registrations...</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="c1"># ── New: Weather Tool ─────────────────────────────────</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="p">(</span><span class="s1">&#39;server.servers.weather.tooldef&#39;</span><span class="p">,</span> <span class="s1">&#39;TOOL_DEFINITIONS&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="c1"># ──────────────────────────────────────────────────────</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">]</span>
+<h3 id="2-calculatorpy-implement-tool-handlers">2. calculator.py - Implement Tool Handlers</h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="sd">&quot;&quot;&quot;Calculator tool handler&quot;&quot;&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolResult</span><span class="p">,</span> <span class="n">ToolContext</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">calculator</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ToolContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="sd">    Execute calculator operation</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="sd">    Args:</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="sd">        args: Dictionary containing operation, a, and b</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="sd">        ctx: Tool context</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="sd">    Returns:</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="sd">        ToolResult: Calculation result</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    <span class="n">operation</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;operation&#39;</span><span class="p">)</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="n">a</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="n">b</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>        <span class="k">match</span> <span class="n">operation</span><span class="p">:</span>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>            <span class="k">case</span> <span class="s1">&#39;add&#39;</span><span class="p">:</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>                <span class="n">op_symbol</span> <span class="o">=</span> <span class="s1">&#39;+&#39;</span>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>            <span class="k">case</span> <span class="s1">&#39;subtract&#39;</span><span class="p">:</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">a</span> <span class="o">-</span> <span class="n">b</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>                <span class="n">op_symbol</span> <span class="o">=</span> <span class="s1">&#39;-&#39;</span>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>            <span class="k">case</span> <span class="s1">&#39;multiply&#39;</span><span class="p">:</span>
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span>
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>                <span class="n">op_symbol</span> <span class="o">=</span> <span class="s1">&#39;*&#39;</span>
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>            <span class="k">case</span> <span class="s1">&#39;divide&#39;</span><span class="p">:</span>
+</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>                <span class="k">if</span> <span class="n">b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>                    <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s1">&#39;Error: Division by zero is not allowed&#39;</span><span class="p">)</span>
+</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="n">b</span>
+</span><span id="__span-4-38"><a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a>                <span class="n">op_symbol</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span>
+</span><span id="__span-4-39"><a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a>            <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+</span><span id="__span-4-40"><a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a>                <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Unknown operation type: </span><span class="si">{</span><span class="n">operation</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="__span-4-41"><a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a>
+</span><span id="__span-4-42"><a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a>        <span class="c1"># Build result text</span>
+</span><span id="__span-4-43"><a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a>        <span class="n">result_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">op_symbol</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s1">&#39;</span>
+</span><span id="__span-4-44"><a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a>
+</span><span id="__span-4-45"><a id="__codelineno-4-45" name="__codelineno-4-45" href="#__codelineno-4-45"></a>        <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span>
+</span><span id="__span-4-46"><a id="__codelineno-4-46" name="__codelineno-4-46" href="#__codelineno-4-46"></a>            <span class="n">text</span><span class="o">=</span><span class="n">result_text</span><span class="p">,</span>
+</span><span id="__span-4-47"><a id="__codelineno-4-47" name="__codelineno-4-47" href="#__codelineno-4-47"></a>            <span class="n">log_msg</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;🧮 Calculator: </span><span class="si">{</span><span class="n">result_text</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+</span><span id="__span-4-48"><a id="__codelineno-4-48" name="__codelineno-4-48" href="#__codelineno-4-48"></a>            <span class="n">log_role</span><span class="o">=</span><span class="s1">&#39;TOOL&#39;</span>
+</span><span id="__span-4-49"><a id="__codelineno-4-49" name="__codelineno-4-49" href="#__codelineno-4-49"></a>        <span class="p">)</span>
+</span><span id="__span-4-50"><a id="__codelineno-4-50" name="__codelineno-4-50" href="#__codelineno-4-50"></a>
+</span><span id="__span-4-51"><a id="__codelineno-4-51" name="__codelineno-4-51" href="#__codelineno-4-51"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-4-52"><a id="__codelineno-4-52" name="__codelineno-4-52" href="#__codelineno-4-52"></a>        <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Calculation error: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 </span></code></pre></div>
-<p><strong>Parameter Description:</strong>
-- 1st parameter: Path to the module tool definition (<code>server.servers.module.tooldef</code>)
-- 2nd parameter: Tool definition variable name (default <code>TOOL_DEFINITIONS</code>)
-- 3rd parameter: Condition check function name (<code>None</code> means always available)</p>
-<h3 id="42-adding-routes-in-routerpy">4.2 Adding Routes in router.py</h3>
-<p>Edit <code>server/router.py</code> and add routes in the <code>_execute_tool()</code> function:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_execute_tool</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ToolContext</span><span class="p">,</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>                  <span class="n">work_model</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="k">match</span> <span class="n">name</span><span class="p">:</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="c1"># ── New: Weather Tool ────────────────────────────────</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="k">case</span> <span class="s1">&#39;get_weather&#39;</span><span class="p">:</span>      <span class="k">return</span> <span class="n">weather_handler</span><span class="o">.</span><span class="n">get_weather</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="c1"># ───────────────────────────────────────────────────</span>
+<h3 id="3-initpy-register-module">3. <strong>init</strong>.py - Register Module</h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="sd">calculator Server module</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="sd">Provides basic mathematical operations</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServerRegistration</span><span class="p">,</span> <span class="n">register_server</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.calculator.tooldef</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOL_DEFINITIONS</span><span class="p">,</span> <span class="n">is_available</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">calculator</span> <span class="k">as</span> <span class="n">handler</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">register_server</span><span class="p">(</span><span class="n">ServerRegistration</span><span class="p">(</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;calculator&#39;</span><span class="p">,</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="n">tool_definitions</span><span class="o">=</span><span class="n">TOOL_DEFINITIONS</span><span class="p">,</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="n">handlers</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>        <span class="s1">&#39;calculator&#39;</span><span class="p">:</span> <span class="n">handler</span><span class="p">,</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>    <span class="p">},</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="n">condition</span><span class="o">=</span><span class="n">is_available</span><span class="p">,</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="p">))</span>
 </span></code></pre></div>
-<p><strong>You also need to import the module at the top of the file:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># from ... import ...</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.servers</span><span class="w"> </span><span class="kn">import</span> <span class="n">weather</span> <span class="k">as</span> <span class="n">weather_handler</span>  <span class="c1"># ← New</span>
-</span></code></pre></div>
-<hr />
-<h2 id="5-data-class-descriptions">5. Data Class Descriptions</h2>
-<h3 id="51-toolresult">5.1 ToolResult</h3>
-<p><code>ToolResult</code> is the return value of tool execution:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nd">@dataclass</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolResult</span><span class="p">:</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tool execution result.</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="sd">    text:          Text content returned to the model (required)</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="sd">    file_contents: File content read this time, format {file_key: content} (optional)</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="sd">    is_finish:     True indicates finish() was called, round terminates (default False)</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="sd">    log_msg:       Log to output to user; None means no log</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="sd">                   str                   → Single entry, role determined by log_role</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="sd">                   list[tuple[str,str]]  → Multiple entries, each as (msg, role)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="sd">    log_role:      Role for single log entry, default &#39;TOOL&#39;</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">file_contents</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">is_finish</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">log_msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>    <span class="n">log_role</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;TOOL&#39;</span>
-</span></code></pre></div>
-<h3 id="52-toolcontext">5.2 ToolContext</h3>
-<p><code>ToolContext</code> is the read-only context during tool execution:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nd">@dataclass</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolContext</span><span class="p">:</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read-only context required for tool execution.</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="sd">    cfg:          Current configuration dictionary</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="sd">    input_func:   User input function (default input)</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">input_func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="nb">input</span><span class="p">)</span>
-</span></code></pre></div>
-<hr />
-<h2 id="6-tool-handler-writing-specifications">6. Tool Handler Writing Specifications</h2>
-<h3 id="61-function-signature">6.1 Function Signature</h3>
-<p>All tool handlers follow a unified signature:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">tool_name</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ToolContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tool description docstring.&quot;&quot;&quot;</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="c1"># Implementation logic</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s1">&#39;...&#39;</span><span class="p">)</span>
-</span></code></pre></div>
-<hr />
-<h2 id="7-advanced-features">7. Advanced Features</h2>
-<h3 id="71-conditional-availability-tools">7.1 Conditional Availability Tools</h3>
-<p>You can use condition check functions to implement tools that are only triggered under specific conditions:</p>
-<p><strong>tooldef.py:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_my_tool_available</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;My tool is only available under specific conditions.&quot;&quot;&quot;</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">server.servers.my_module</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_ready</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>        <span class="k">return</span> <span class="n">is_ready</span><span class="p">()</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        <span class="k">return</span> <span class="kc">False</span>
-</span></code></pre></div>
-<p><strong>tool_registry.py Registration:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">(</span><span class="s1">&#39;server.servers.my_tool.tooldef&#39;</span><span class="p">,</span> <span class="s1">&#39;TOOL_DEFINITIONS&#39;</span><span class="p">,</span> <span class="s1">&#39;is_my_tool_available&#39;</span><span class="p">),</span>
-</span></code></pre></div>
-<p>Condition functions must return <code>bool</code>.</p>
-<h3 id="72-file-content-injection-and-history-folding">7.2 File Content Injection and History Folding</h3>
-<p>When tools process data sources like files, you can inject content into history through the <code>file_contents</code> field to trigger automatic folding, thereby reducing Token consumption:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_my_file</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ToolContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">file_path</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file_path&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">content</span> <span class="o">=</span> <span class="n">read_file_content</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="k">return</span> <span class="n">ToolResult</span><span class="p">(</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>        <span class="n">text</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Opened File: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">content</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>        <span class="n">file_contents</span><span class="o">=</span><span class="p">{</span><span class="n">file_path</span><span class="p">:</span> <span class="n">content</span><span class="p">},</span>  <span class="c1"># ← Triggers history folding</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        <span class="n">log_msg</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Read File: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="p">)</span>
-</span></code></pre></div>
-<h3 id="73-dynamic-tool-registration">7.3 Dynamic Tool Registration</h3>
-<p>Dynamically register tools at runtime:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">server.tool_registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_server_tools</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># Dynamic registration</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">register_server_tools</span><span class="p">(</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">module_path</span><span class="o">=</span><span class="s1">&#39;my_plugin.tools&#39;</span><span class="p">,</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">tools_var_name</span><span class="o">=</span><span class="s1">&#39;MY_TOOLS&#39;</span><span class="p">,</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="n">condition_func_name</span><span class="o">=</span><span class="s1">&#39;is_plugin_available&#39;</span><span class="p">,</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">)</span>
+<p>After creating the files above, Momoka can use this Momoka Server.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>User: Help me calculate 123 plus 456
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>→ Momoka calls calculator({&quot;operation&quot;: &quot;add&quot;, &quot;a&quot;: 123, &quot;b&quot;: 456})
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>→ Returns: 123 + 456 = 579
 </span></code></pre></div>
 
 

@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://xiaomi2023.github.io/Momoka/headless/">
       
       
-        <link rel="prev" href="../configuration/">
+        <link rel="prev" href="../command/">
       
       
         <link rel="next" href="../momoka_server/">
@@ -288,6 +288,25 @@
   
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../command/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Commands
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
     
   
   
@@ -318,6 +337,44 @@
     
   
   Momoka Server
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../mcp_integration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Integration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../skill/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Skill
 
       </a>
     </li>
@@ -454,6 +511,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../command/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -462,6 +546,8 @@
       
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
+      
+        
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
@@ -505,23 +591,14 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#headless-mode-beta" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Headless Mode (BETA)
-      
-    </span>
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#quick-start" class="md-nav__link">
@@ -668,34 +745,6 @@
     <span class="md-ellipsis">
       
         Bash
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#advanced-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Usage
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Advanced Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#integration-with-logging-system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Integration with Logging System
       
     </span>
   </a>
@@ -742,6 +791,60 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skill/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skill
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -759,23 +862,14 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#headless-mode-beta" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Headless Mode (BETA)
-      
-    </span>
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#quick-start" class="md-nav__link">
@@ -933,34 +1027,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#advanced-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Usage
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Advanced Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#integration-with-logging-system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Integration with Logging System
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -981,9 +1047,7 @@
   
 
 
-  <h1>Headless Mode</h1>
-
-<h2 id="headless-mode-beta">Headless Mode (BETA)</h2>
+<h1 id="headless-mode-beta">Headless Mode (BETA)</h1>
 <p>Headless Mode provides the ability to interact with Momoka programmatically,
 enabling integration with backend services, batch processing tasks, container deployments, and other scenarios.</p>
 <h2 id="quick-start">Quick Start</h2>
@@ -1188,9 +1252,6 @@ enabling integration with backend services, batch processing tasks, container de
 </span><span id="__span-9-28"><a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a><span class="w">  </span><span class="k">esac</span>
 </span><span id="__span-9-29"><a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a><span class="k">done</span>
 </span></code></pre></div>
-<h2 id="advanced-usage">Advanced Usage</h2>
-<h3 id="integration-with-logging-system">Integration with Logging System</h3>
-<p>Headless mode still writes to log files (<code>logs/log.txt</code> and <code>logs/chat_history_log.txt</code>), facilitating subsequent auditing and debugging.</p>
 
 
 

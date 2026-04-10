@@ -5,6 +5,8 @@ host/momoka.py —— Agent 编排器。
 以及 skill 的加载与清除。
 """
 
+import json
+import os
 from dataclasses import dataclass
 
 from logger import log
@@ -16,54 +18,60 @@ from server.tool_registry import get_available_tools
 
 @dataclass
 class SendResult:
-    """send() 方法的返回结果。"""
-    is_finish: bool          # 是否调用了 finish
-    file_contents: dict      # 本轮读取的文件内容
-    input_tokens: int        # 输入 token 数
-    output_tokens: int       # 输出 token 数
-    round_count: int         # 对话轮数
+    """Return result from send() method."""
+    is_finish: bool          # Whether finish was called
+    file_contents: dict      # Files read in this round
+    input_tokens: int        # Input token count
+    output_tokens: int       # Output token count
+    round_count: int         # Number of conversation rounds
 
 
 @dataclass
 class SkillLoadResult:
-    """load_skill() 方法的返回结果。"""
-    success: bool            # 是否加载成功
-    message: str             # 结果消息
+    """Return result from load_skill() method."""
+    success: bool            # Whether loading succeeded
+    message: str             # Result message
 
 
 @dataclass
 class AgentLoopResult:
-    """Agent 循环执行结果。"""
-    is_finish: bool          # 是否调用了 finish
-    file_contents: dict      # 本轮读取的文件内容
-    input_tokens: int        # 输入 token 数
-    output_tokens: int       # 输出 token 数
-    round_count: int         # 对话轮数
+    """Agent loop execution result."""
+    is_finish: bool          # Whether finish was called
+    file_contents: dict      # Files read in this round
+    input_tokens: int        # Input token count
+    output_tokens: int       # Output token count
+    round_count: int         # Number of conversation rounds
 
 
 class Momoka:
-    """Momoka agent 编排器。"""
+    """Momoka agent orchestrator."""
 
     def __init__(self, user=None, call_wrapper=None):
         """
         Args:
-            user: 用户实例，用于输出日志
-            call_wrapper: 可选的调用包装器，用于在 API 调用期间显示 spinner 等。
-                         签名: wrapper(fn, *args, **kwargs) -> result
+            user: User instance, used for outputting logs
+            call_wrapper: Optional call wrapper for showing spinners etc. during API calls.
+                         Signature: wrapper(fn, *args, **kwargs) -> result
         """
         self._user = user
         self._model = Model(name='Momoka', user=user)
         self._model.set_system(build_system_prompt())
         self._call_wrapper = call_wrapper or (lambda fn, *a, **kw: fn(*a, **kw))
 
-    # ── 对外接口（供 user 层调用）─────────────────────────────────────────
+        # Load preset conversations
+        self._load_preset_conversations()
+
+        # Initialize MCP Client
+        self._init_mcp_client()
+
+    # ── Public API (called by user layer) ──────────────────────────────────
 
     def send(self, message: str,
              file_contents: dict[str, str] | None = None) -> SendResult:
-        """接收用户消息，启动 agent 循环，返回循环结束时的状态。"""
+        """Receive user message, start agent loop, return status when loop ends."""
         log(f'momoka.send | {message}')
         
-        # 获取当前可用的工具列表
+        # Get current available tools
         available_tools = get_available_tools()
         
         response = self._call_wrapper(
@@ -92,43 +100,129 @@ class Momoka:
         )
 
     def load_skill(self, skill_name: str) -> SkillLoadResult:
-        """加载指定 skill 并注入 system prompt。"""
+        """Load specified skill and inject into system prompt."""
         from server.router import _execute_tool
-        skill_result, skill_fc, _ = _execute_tool('get_skill', {'skill_name': skill_name})
-        if skill_fc:
-            self._model.inject_skill(skill_name, skill_result)
-            log(f'momoka.load_skill | 注入: {skill_name}')
-            return SkillLoadResult(success=True, message=skill_result)
+        from server import ToolContext
+        from config import get_config
+        
+        cfg = get_config()
+        ctx = ToolContext(cfg=cfg, input_func=input)
+        result = _execute_tool('get_skill', {'skill_name': skill_name}, ctx)
+        
+        # result is a ToolResult object
+        skill_text = result.text
+        has_file_contents = bool(result.file_contents)
+        
+        if has_file_contents:
+            self._model.inject_skill(skill_name, skill_text)
+            log(f'momoka.load_skill | Injected: {skill_name}')
+            return SkillLoadResult(success=True, message=skill_text)
         else:
-            return SkillLoadResult(success=False, message=skill_result)
+            return SkillLoadResult(success=False, message=skill_text)
 
     def finish_task(self):
-        """任务完成后清除所有已注入的 skill。"""
+        """Clear all injected skills after task completion."""
         self._model.clear_skills()
 
+    def _init_mcp_client(self):
+        """Initialize MCP client"""
+        # Ensure MCP logs are suppressed (in case main.py settings were overridden)
+        import logging
+        logging.getLogger('mcp').setLevel(logging.WARNING)
+        
+        # Check if MCP SDK is installed
+        try:
+            import mcp  # noqa: F401
+        except ImportError:
+            log('MCP: SDK not installed, skipping initialization')
+            if self._user:
+                self._user.user_log(
+                    'MCP SDK not installed. '
+                    'Run: \npip install mcp\nto enable MCP connections',
+                    role='WARN'
+                )
+            return
+
+        # Load configuration
+        from server.servers.mcp.config_loader import load_mcp_configs
+        configs = load_mcp_configs()
+
+        if not configs:
+            log('MCP: No MCP servers configured')
+            return
+
+        # Create manager and initialize
+        from server.servers.mcp.mcp_client import MCPClientManager
+        from server.servers.mcp import set_mcp_manager
+        from server.servers import get_all_tool_names, invalidate_tool_cache
+
+        # Get builtin tool names before MCP initialization
+        builtin_tools = set(get_all_tool_names())
+
+        manager = MCPClientManager()
+        
+        # Set user reference for logging
+        if self._user:
+            manager.set_user(self._user)
+
+        try:
+            successful = manager.sync_initialize(configs, builtin_tools)
+
+            if successful:
+                log(f'MCP: Successfully initialized {len(successful)} server(s): {", ".join(successful)}')
+                # Set global manager
+                set_mcp_manager(manager)
+                # Invalidate tool name cache and rebuild immediately
+                invalidate_tool_cache()
+                # Force rebuild cache now (instead of waiting for first dispatch_tool call)
+                from server.servers import _build_tool_cache
+                _build_tool_cache()
+                # Verify tools were registered
+                from server.servers import get_all_tool_names
+                mcp_tools = [n for n in get_all_tool_names() if 'test_server' in n]
+                log(f'MCP: Registered MCP tools after cache rebuild: {mcp_tools}')
+            else:
+                log('MCP: All servers failed to connect')
+                if self._user:
+                    self._user.user_log('All MCP servers failed to connect', role='WARN')
+        except Exception as e:
+            log(f'MCP: Initialization failed: {e}')
+            if self._user:
+                self._user.user_log(f'MCP initialization failed: {e}', role='WARN')
+
+    def _load_preset_conversations(self):
+        """Load preset conversations from file."""
+        preset_file = os.path.join(os.path.dirname(__file__), 'prompt', 'preset_convs.md')
+        try:
+            with open(preset_file, 'r', encoding='utf-8') as f:
+                preset_convs = json.load(f)
+            self._model._ctx.insert_preset_conversations(preset_convs)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            log(f'momoka._load_preset_conversations | Failed to load preset conversations: {e}')
+
     def repair_history(self) -> int:
-        """修复历史中的孤儿 tool_calls 消息。"""
+        """Repair orphaned tool_calls messages in history."""
         return self._model.repair_history()
 
     def _check_interrupt(self) -> bool:
-        """检查是否有待处理的中断请求，若有则打印提示并返回 True。"""
-        # call_wrapper 可能是 CLIUser.call_wrapper 的绑定方法，
-        # 通过 __self__ 访问其 pending_interrupt 属性
+        """Check if there's a pending interrupt request, print hint and return True if so."""
+        # call_wrapper might be a bound method of CLIUser.call_wrapper,
+        # access its pending_interrupt attribute via __self__
         owner = getattr(self._call_wrapper, '__self__', None)
         if owner is not None and getattr(owner, 'pending_interrupt', False):
             return True
         return False
 
-    # ── Agent 循环 ────────────────────────────────────────────────────────
+    # ── Agent Loop ─────────────────────────────────────────────────────────
 
     def _agent_loop(self, response: dict, file_contents: dict,
                     input_tokens: int, output_tokens: int,
                     round_count: int) -> AgentLoopResult:
-        """执行工具调用循环，直到 finish 或模型返回纯文本（等待用户输入）。"""
+        """Execute tool call loop until finish or model returns plain text (waiting for user input)."""
         while True:
             text_content: str = response['content']
             tool_calls: list = response['tool_calls']
-            # ── 情形A：有工具调用 ──────────────────────────────────────
+            # ── Case A: Has tool calls ─────────────────────────────────
             if tool_calls:
                 if text_content:
                     if self._user:
@@ -145,7 +239,7 @@ class Momoka:
                         round_count=round_count
                     )
 
-                # 本轮工具执行完毕，检查是否有待处理的中断请求
+                # Tool execution completed this round, check for pending interrupt requests
                 if self._check_interrupt():
                     return AgentLoopResult(
                         is_finish=False,
@@ -155,11 +249,11 @@ class Momoka:
                         round_count=round_count
                     )
 
-                # 获取最新的可用工具列表（浏览器状态可能已改变）
+                # Get latest available tools (browser state may have changed)
                 available_tools = get_available_tools()
-                
+
                 response = self._call_wrapper(
-                    self._model.resume, 
+                    self._model.resume,
                     use_tools=True,
                     available_tools=available_tools
                 )
@@ -168,7 +262,7 @@ class Momoka:
                 round_count += 1
                 continue
 
-            # ── 情形B：纯文本，交还控制权给用户 ───────────────────────
+            # ── Case B: Plain text, return control to user ───────────────
             if text_content:
                 if self._user:
                     self._user.user_log(text_content, role='BOT')

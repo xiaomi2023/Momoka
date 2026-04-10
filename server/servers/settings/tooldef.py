@@ -17,7 +17,7 @@ TOOL_DEFINITIONS: list[dict] = [
             'name': 'set_wait',
             'description': (
                 'Set the maximum timeout duration (seconds) for operations.\n'
-                "target='default' adjusts the general timeout (default 10 seconds), affecting all browser operations and command execution.\n"
+                "target='default' adjusts the general timeout (default 10 seconds), affecting almost all operations except file downloads.\n"
                 "target='download' adjusts the browser file download timeout (default 60 seconds), affecting browse_download only.\n"
             ),
             'parameters': {

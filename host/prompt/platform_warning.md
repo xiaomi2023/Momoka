@@ -1,0 +1,1 @@
+- Note: You are running on Windows. Many Unix/Linux commands (e.g., ls, grep, sed, awk, curl, etc.) may not be available or may behave differently.

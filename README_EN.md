@@ -70,16 +70,11 @@ After running, enter the following commands in the console to configure the Base
 /set api_key sk-***
 /set work_dir "C:\\Users\\..."
 ```
-Enter **/model** to select a model, and send a test message to ensure everything is ready.  
-You can use the **/help** command to get help, or the **/set** command to get more parameter information.
+Enter **/model** to select a model.
+Send a test message to ensure everything is ready, then you can chat with Momoka or ask Momoka to perform tasks.
 
-## 🔧 Skill
-**Skill** is a modular, reusable package of instructions and tools that can extend the model's capabilities or provide additional knowledge.  
-Configure Skills by adding Skill folders containing **SKILL.md** and optional resource files to the `skill/` directory. Skills can be dynamically loaded by the Agent, or manually loaded using the **/[Skill name]** command.  
-For more information, please refer to [here](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/).
-
-## More Information
+## 📄 More Information
 [Documentation](https://xiaomi2023.github.io/Momoka/)
 
-## 📄 License
+## License
 This repository is licensed under the [Apache License 2.0](LICENSE).

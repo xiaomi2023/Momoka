@@ -14,9 +14,8 @@
 
 - [Quick Start](quick_start.md)
 - [Configuration](configuration.md)
+- [Commands](command.md)
+- [Skill](skill.md)
 - [Headless Mode (BETA)](headless.md)
+- [MCP Server Integration (BETA)](mcp_integration.md)
 - [Momoka Server (BETA)](momoka_server.md)
-
----
-
-*Last updated: 2026-04-05*

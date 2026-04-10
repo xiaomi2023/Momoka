@@ -194,7 +194,7 @@ def system_command(args: dict, ctx: ToolContext) -> ToolResult:
     input_log += '\n'
 
     output = _system_command_impl(command, inputs=inputs)
-    output_log = f'Shell Output: {"(NULL)" if output == "" else chr(10) + output}'
+    output_log = f'Shell Output: {"\n" + output if output.strip() else "(NULL)"}'
 
     return ToolResult(
         text=output or '(EMPTY OUTPUT)',
@@ -297,8 +297,12 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
                       f'or use other methods to read the content>'),
                 log_msg=log_label,
             )
+        file_name = os.path.basename(file_path)
         return ToolResult(
-            text=f'Opened File: {file_path}\n{file_path}:\n{content}',
+            text=f'<Opened File {file_name} in {file_path}>\n'
+                 f'<{file_name}>\n'
+                 f'{content}\n'
+                 f'</{file_name}>',
             file_contents={file_path: content},
             log_msg=log_label,
         )

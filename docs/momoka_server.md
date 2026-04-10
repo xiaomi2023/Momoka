@@ -1,4 +1,4 @@
-# Momoka Server (BETA)
+# Momoka Server (Beta)
 
 ### Table of Contents
 
@@ -15,46 +15,41 @@
 - [Example](#example)
   - [Directory Structure](#directory-structure)
   - [1. tooldef.py - Define Tools](#1-tooldefpy---define-tools)
-  - [2. calculator.py - Implement Tool Handler](#2-calculatorpy---implement-tool-handler)
+  - [2. calculator.py - Implement Tool Handlers](#2-calculatorpy---implement-tool-handlers)
   - [3. __init__.py - Register Module](#3-__init__py---register-module)
 
 ## Overview
 
-Momoka Server is the way Momoka interacts with external data sources and tools. By customizing Momoka Server and utilizing tool services, context management, and other features, you can enable Momoka to connect and interact with external services.
+Momoka Server is the way Momoka interacts with external data sources and tools. By creating custom Momoka Servers and leveraging features like tool services and context management, you can enable Momoka to connect and interact with external services.
 
-## Momoka Server Module Structure
+## Module Structure
 
-Each Momoka Server module follows the following directory structure:
+Momoka Server modules are placed in `/server/servers`. Each module should contain an `__init__.py` file to register fields like Tool Definitions, Handlers, etc.
 
-```
-server/servers/<name>/
-├── __init__.py      # Module registration
-├── <name>.py        # Tool handler
-└── tooldef.py       # Tool definitions (JSON Schema)
-```
+Momoka provides the Tool Definitions to the model, enabling it to call them as needed. After the model makes a tool call, Momoka processes it using the corresponding Handler and can return execution results to the model/user.
 
 ## Core Components
 
 ### ToolResult
 
-Data class representing tool execution results:
+A data class representing the execution result of a tool:
 
 - `text`: str — Text content returned to the model
-- `file_contents`: dict[str, str] | None — Processed data information ({file_key: content})
-- `is_finish`: bool — Whether to end the task (default is False)
-- `log_msg`: str | list[tuple[str, str]] | None — Log message provided to the user
-- `log_role`: str | None — Log type
+- `file_contents`: dict[str, str] | None — Processed file information ({file_key: content})
+- `is_finish`: bool — Whether to end the task (default: False)
+- `log_msg`: str | list[tuple[str, str]] | None — Log message for the user
+- `log_role`: str | None — Log role/type
 
 ### ToolContext
 
-Read-only context object passed to all tool handlers:
+A read-only context object passed to all tool handlers:
 
 - `cfg`: dict — Configuration dictionary
 - `input_func`: Callable | None — Input function
 
 ### ServerRegistration
 
-Data class used to register Momoka Server modules:
+A data class for registering Momoka Server modules:
 
 - `name`: str — Module name
 - `tool_definitions`: list[dict] — List of tool definitions (JSON Schema)
@@ -64,20 +59,20 @@ Data class used to register Momoka Server modules:
 
 ### Momoka Server Registration API
 
-Can be imported from `server.servers`:
+Importable from `server.servers`:
 
 - `register_server(reg: ServerRegistration)` — Register a Server module
 - `get_registered_servers() -> dict[str, ServerRegistration]` — Get all registered Servers
 - `get_server(name: str) -> ServerRegistration | None` — Get a specific Server by name
 - `get_available_tools() -> list[dict]` — Get all available tool definitions
-- `dispatch_tool(name: str, args: dict, ctx: ToolContext) -> ToolResult | None` — Dispatch tool calls to the corresponding Server
+- `dispatch_tool(name: str, args: dict, ctx: ToolContext) -> ToolResult | None` — Dispatch a tool call to the corresponding Server
 - `clear_registrations()` — Clear all registrations
 
 ## Registration Methods
 
 ### Method 1: Using handlers Dictionary (Recommended)
 
-Provide a mapping from tool names to handler functions:
+Provide a mapping of tool names to handler functions:
 
 ```python
 from server.servers import ServerRegistration, register_server
@@ -98,7 +93,7 @@ Handler function signature: `func(args: dict, ctx: ToolContext) -> ToolResult`
 
 ### Method 2: Using Custom Handler Function
 
-If you need more complex dispatch logic, you can define a custom handler function:
+If you need more complex dispatch logic, you can create a custom handler function:
 
 ```python
 from server import ToolResult, UnknownToolError
@@ -127,15 +122,15 @@ register_server(ServerRegistration(
 
 ### Conditional Tool Availability
 
-Through the `condition` parameter of `ServerRegistration`, you can specify a function that returns `bool` to control tool availability. When `condition` returns `False`, all tools of that Momoka Server will not appear in the list returned by `get_available_tools()`, making them unavailable for Momoka to call.
+Using the `condition` parameter of `ServerRegistration`, you can specify a function that returns a `bool` to control tool availability. When `condition` returns `False`, all tools from that Momoka Server will not appear in the list returned by `get_available_tools()`, preventing Momoka from calling them.
 
 ### Context Folding
 
-To reduce context window usage, Momoka supports automatic folding of historical data content. Each time a file is read, the `file_contents` field of `ToolResult` records the filename and content. When the same file is read multiple times or after a task round is completed, file contents in the context are replaced with placeholders, except for the most recent one.
+To reduce context window usage, Momoka supports automatic folding of historical data content. Each time a file is read, the `file_contents` field of `ToolResult` records the filename and content. When the same file is read multiple times or after a task round completes, the file content in the context will be replaced with a placeholder, keeping only the most recent content.
 
 ## Example
 
-The following is an example of a custom Momoka Server, demonstrating how to create a simple calculator tool:
+Here's an example of a custom Momoka Server, demonstrating how to create a simple calculator tool:
 
 ### Directory Structure
 
@@ -143,7 +138,7 @@ The following is an example of a custom Momoka Server, demonstrating how to crea
 server/servers/calculator/
 ├── __init__.py      # Module registration
 ├── calculator.py    # Tool handler implementation
-└── tooldef.py       # Tool definitions (JSON Schema)
+└── tooldef.py       # Tool definition (JSON Schema)
 ```
 
 ### 1. tooldef.py - Define Tools
@@ -156,14 +151,14 @@ TOOL_DEFINITIONS = [
         'type': 'function',
         'function': {
             'name': 'calculator',
-            'description': 'Perform basic mathematical operations (addition, subtraction, multiplication, division)',
+            'description': 'Perform basic mathematical operations (add, subtract, multiply, divide)',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'operation': {
                         'type': 'string',
                         'enum': ['add', 'subtract', 'multiply', 'divide'],
-                        'description': 'Operation type: add, subtract, multiply, divide'
+                        'description': 'Operation type: add, subtract, multiply, or divide'
                     },
                     'a': {
                         'type': 'number',
@@ -182,14 +177,16 @@ TOOL_DEFINITIONS = [
 
 
 def is_available() -> bool:
-    """Check if calculator tool is available (always available)"""
+    """Check if the calculator tool is available (always available)"""
     return True
 ```
 
-### 2. calculator.py - Implement Tool Handler
+### 2. calculator.py - Implement Tool Handlers
 
 ```python
 """Calculator tool handler"""
+
+from __future__ import annotations
 
 from server import ToolResult, ToolContext
 
@@ -197,18 +194,18 @@ from server import ToolResult, ToolContext
 def calculator(args: dict, ctx: ToolContext) -> ToolResult:
     """
     Execute calculator operation
-    
+
     Args:
-        args: Dictionary containing operation, a, b
+        args: Dictionary containing operation, a, and b
         ctx: Tool context
-    
+
     Returns:
-        ToolResult: Operation result
+        ToolResult: Calculation result
     """
     operation = args.get('operation')
     a = args.get('a')
     b = args.get('b')
-    
+
     try:
         match operation:
             case 'add':
@@ -222,21 +219,21 @@ def calculator(args: dict, ctx: ToolContext) -> ToolResult:
                 op_symbol = '*'
             case 'divide':
                 if b == 0:
-                    return ToolResult(text='Error: Divisor cannot be zero')
+                    return ToolResult(text='Error: Division by zero is not allowed')
                 result = a / b
                 op_symbol = '/'
             case _:
                 return ToolResult(text=f'Unknown operation type: {operation}')
-        
+
         # Build result text
         result_text = f'{a} {op_symbol} {b} = {result}'
-        
+
         return ToolResult(
             text=result_text,
             log_msg=f'🧮 Calculator: {result_text}',
             log_role='TOOL'
         )
-    
+
     except Exception as e:
         return ToolResult(text=f'Calculation error: {str(e)}')
 ```
@@ -246,7 +243,7 @@ def calculator(args: dict, ctx: ToolContext) -> ToolResult:
 ```python
 """
 calculator Server module
-Provides basic mathematical operation functionality
+Provides basic mathematical operations
 """
 
 from __future__ import annotations
@@ -260,16 +257,16 @@ register_server(ServerRegistration(
     name='calculator',
     tool_definitions=TOOL_DEFINITIONS,
     handlers={
-        'calculator': handler.calculator,
+        'calculator': handler,
     },
     condition=is_available,
 ))
 ```
 
-After creating the above files, Momoka will automatically register and use this Momoka Server.
+After creating the files above, Momoka can use this Momoka Server.
 
 ```
-User: Calculate 123 plus 456 for me
+User: Help me calculate 123 plus 456
 
 → Momoka calls calculator({"operation": "add", "a": 123, "b": 456})
 → Returns: 123 + 456 = 579

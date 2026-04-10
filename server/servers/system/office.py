@@ -62,7 +62,10 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
     if not _HAS_DOCX:
         return ToolResult(
             text=_MISSING_DOCX_MSG,
-            log_msg=log_label,
+            log_msg=[
+                (log_label, 'TOOL'),
+                ('Missing dependency: python-docx is required to read Word documents. \nInstall with: pip install python-docx', 'WARN'),
+            ],
         )
 
     tmp_dir = None
@@ -143,8 +146,12 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
                   f'Consider using set_read_limits to increase the limits>'),
             log_msg=log_label,
         )
+    file_name = os.path.basename(file_path)
     return ToolResult(
-        text=f'<Opened File (doc mode): {file_path}>\n{file_path}:\n{md_content}',
+        text=f'<Opened File {file_name} in {file_path}>\n'
+             f'<{file_name}>\n'
+             f'{md_content}\n'
+             f'</{file_name}>',
         file_contents={file_path: md_content},
         log_msg=log_label,
     )
@@ -165,7 +172,10 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
     if not _HAS_OPENPYXL:
         return ToolResult(
             text=_MISSING_OPENPYXL_MSG,
-            log_msg=log_label,
+            log_msg=[
+                (log_label, 'TOOL'),
+                ('Missing dependency: openpyxl is required to read Excel files. \nInstall with: pip install openpyxl', 'WARN'),
+            ],
         )
 
     # ── Non-xlsx: convert with LibreOffice first ─────────────────────

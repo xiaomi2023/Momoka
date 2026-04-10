@@ -60,8 +60,8 @@ BROWSER_PAGE_TOOLS: list[dict] = [
             'name': 'browse_read',
             'description': (
                 "Read the content of the current browser page. Supports three modes:\n"
-                "  'interactive' — list interactive elements (ID, type, label text)\n"
-                "  'text'        — show the page body text\n"
+                "  'interactive' — list interactive elements (ID, type, label text, extra info)\n"
+                "  'text'        — show the page body text (with Markdown formatting: tables, lists, code blocks, quotes, bold/italic, links)\n"
                 "  'all'         — body text + interactive elements (default)\n"
                 "Call this after each browser operation to confirm the result."
             ),

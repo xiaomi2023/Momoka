@@ -32,16 +32,6 @@ from rich.text import Text
 _rich_console = Console(highlight=False)
 _supports_color = _rich_console.color_system is not None
 
-# role → rich 颜色映射（BOT 不染色）
-_ROLE_COLORS: dict[str, str] = {
-    'BROWSER':  'bright_magenta',
-    'LOG':      'bright_cyan',
-    'SHELL':    'bright_green',
-    'WARN':     'bright_yellow',
-    'ERROR':    'red',
-    'SETTINGS': 'bright_yellow',
-}
-
 
 def log(message: str) -> None:
     logging.info(message)

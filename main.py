@@ -16,9 +16,16 @@ Usage:
 """
 
 import argparse
+import logging
 import sys
 
 from host.momoka import Momoka
+
+
+# Suppress MCP SDK INFO logs
+logging.getLogger('mcp').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('httpcore').setLevel(logging.WARNING)
 
 
 def parse_args():

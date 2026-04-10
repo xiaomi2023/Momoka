@@ -258,7 +258,6 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
   encoding   — File encoding (default: utf-8)
   fold       — Fold history file content in output (true/false)
   mute_log   — List of roles to mute in logs (e.g., ["SHELL", "BROWSER"])
-  language   — Response language (null for auto-detect)
   prompt     — Additional system prompt text
 
 Usage: /set <key> <value>[/bright_cyan]"""

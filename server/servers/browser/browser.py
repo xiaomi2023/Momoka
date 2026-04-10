@@ -41,11 +41,33 @@ from __future__ import annotations
 import hashlib
 import os
 import time
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus
 
 from logger import log
 from server import ToolResult, ToolContext
+
+
+# ── JavaScript 代码加载 ─────────────────────────────────────────────────────
+
+@lru_cache(maxsize=None)
+def _load_js(filename: str) -> str:
+    """加载指定名称的 JavaScript 文件内容（带缓存）。
+    
+    Args:
+        filename: JS 文件名（不含路径）
+    Returns:
+        JS 代码字符串
+    """
+    script_dir = Path(__file__).parent / 'scripts'
+    js_path = script_dir / filename
+    try:
+        return js_path.read_text(encoding='utf-8')
+    except Exception as e:
+        log(f"browser | Failed to load JS file {filename}: {e}")
+        raise
 
 # ── 导入 Playwright ────────────────────────────────────────────────────────
 from rebrowser_playwright.sync_api import sync_playwright, Page, Browser, Playwright
@@ -161,6 +183,23 @@ def _ensure_browser(headless: bool = True) -> "Page":
         _page = _browser.new_page(user_agent=_USER_AGENT)
         log("browser | New browser page created [rebrowser-playwright]")
 
+        # 等待 rebrowser 反检测脚本注入完成，确保 JS context 稳定
+        # rebrowser-playwright 会在页面创建后异步注入补丁，此期间 context 不可用
+        try:
+            _page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass  # 新页面通常已加载，超时无妨
+        # 用简单 evaluate 探测 context 是否就绪，带短延迟重试
+        for attempt in range(3):
+            try:
+                _page.evaluate("1")  # 最小化探测
+                break
+            except Exception as e:
+                if _CONTEXT_ERR in str(e) and attempt < 2:
+                    time.sleep(0.3 * (attempt + 1))
+                else:
+                    break  # 非 context 错误或已达上限
+
     return _page
 
 
@@ -169,42 +208,28 @@ def _ensure_browser(headless: bool = True) -> "Page":
 def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
     """用 locator 查询页面，返回 (text_lines, interactive_items)。
 
-    text_lines:        页面正文文字行列表（过滤空行）
-    interactive_items: list of {uuid, role, name, locator_index}
+    text_lines:        页面正文文字行列表（过滤空行，支持 Markdown 格式）
+    interactive_items: list of {uuid, role, name, locator_index, ...}
         - uuid:           8 位唯一 ID
         - role:           小写 role 字符串
         - name:           可访问名称（已保证非空）
         - locator_index:  该 role+name 组合下的第几个元素（0-based，用于精确定位）
+        - href:           链接的绝对 URL（仅 link 角色）
+        - action:         按钮的表单动作（仅 button 角色）
+        - field_label:    输入框的标签文字（仅 input 类角色）
     """
     text_lines: list[str] = []
     interactive_items: list[dict] = []
 
-    # ── 正文：通过 JS 遍历可见文字节点 ─────────────────────────────────
-    _js_text = """() => {
-            const lines = [];
-            const walker = document.createTreeWalker(
-                document.body, NodeFilter.SHOW_TEXT, null
-            );
-            let node;
-            while ((node = walker.nextNode())) {
-                const t = node.textContent.trim();
-                if (!t) continue;
-                const el = node.parentElement;
-                if (!el) continue;
-                const tag = el.tagName;
-                if (['SCRIPT','STYLE','NOSCRIPT'].includes(tag)) continue;
-                if (el.offsetParent === null && tag !== 'BODY') continue;
-                lines.push(t);
-            }
-            return lines;
-        }"""
+    # ── 正文：通过 JS 遍历可见文字节点，增强 Markdown 转换 ────────────────
+    _js_text = _load_js('extract_text.js')
     try:
         raw_text = _safe_evaluate(page, _js_text)
         text_lines = [t for t in (raw_text or []) if t.strip()]
     except Exception as e:
         log(f"browser | text extraction error: {e}")
 
-    # ── 可交互元素：按 role 逐一查询，不去重，全部保留 ────────────────────
+    # ── 可交互元素：按 role 逐一查询，跳过链接（链接已在 MD 文本中显示 URL）───
     seen_uids: set = set()
     for role in _INTERACTIVE_ROLES:
         try:
@@ -222,8 +247,7 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
                             locator_name = (el.get_attribute('aria-label') or '').strip()
                         if not locator_name:
                             locator_name = (el.get_attribute('title') or '').strip()
-                        current_val = (el.input_value(timeout=500) or '').strip()
-                        name = f'[Fill: {current_val}]' if current_val else locator_name
+                        name = locator_name  # name 恢复为正常显示名称
                     else:
                         locator_name = (el.inner_text(timeout=500) or '').strip()
                         if not locator_name:
@@ -250,7 +274,60 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
                 except Exception:
                     visible = False
 
+                try:
+                    disabled = el.is_disabled()
+                except Exception:
+                    disabled = False
+
                 uid = _make_uid(role, locator_name, i, seen_uids)
+
+                # 构建扩展属性
+                extra_attrs = {}
+                if disabled:
+                    extra_attrs['disabled'] = True
+                
+                # 按钮：提取 pressed/expanded 状态
+                if role == 'button':
+                    try:
+                        action = (el.get_attribute('aria-pressed') or
+                                 el.get_attribute('aria-expanded') or '')
+                        if action:
+                            extra_attrs['state'] = action
+                    except Exception:
+                        pass
+
+                # 输入框：提取字段标签和当前填充值
+                elif role in {'textbox', 'searchbox', 'combobox', 'spinbutton'}:
+                    try:
+                        # 尝试获取关联的 label
+                        field_id = (el.get_attribute('id') or '').strip()
+                        if field_id:
+                            try:
+                                label_el = page.locator(f'label[for="{field_id}"]')
+                                if label_el.count() > 0:
+                                    extra_attrs['field_label'] = (label_el.inner_text(timeout=500) or '').strip()
+                            except Exception:
+                                pass
+                        # 获取当前填充值
+                        current_val = (el.input_value(timeout=500) or '').strip()
+                        if current_val:
+                            extra_attrs['fill'] = current_val
+                        # 获取输入类型
+                        input_type = (el.get_attribute('type') or 'text').strip()
+                        if input_type != 'text':
+                            extra_attrs['input_type'] = input_type
+                    except Exception:
+                        pass
+                
+                # 复选框/单选框：提取选中状态
+                elif role in {'checkbox', 'radio'}:
+                    try:
+                        checked = (el.get_attribute('aria-checked') or 
+                                 el.is_checked() if hasattr(el, 'is_checked') else False)
+                        extra_attrs['checked'] = str(checked) == 'true' or checked is True
+                    except Exception:
+                        pass
+                
                 interactive_items.append({
                     'uuid': uid,
                     'role': role,
@@ -258,6 +335,7 @@ def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
                     'locator_name': locator_name,
                     'locator_index': i,
                     'visible': visible,
+                    **extra_attrs,
                 })
         except Exception as e:
             log(f"browser | role={role} query error: {e}")
@@ -412,7 +490,7 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
         try:
             title = _safe_evaluate(page, "() => document.title")
         except Exception:
-            title = page.title()  # 降级：直接调用（不经过 evaluate）
+            title = page.title()  # 降级：直接调用 title() 同步属性
         return f"Open: {url}\nTitle: {title}"
     except Exception as e:
         log(f"browser | OPEN error: {e}")
@@ -454,7 +532,7 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
         body = "\n".join(line for line in text_lines if line.strip())
         if len(body) > max_chars:
             body = (body[:max_chars] +
-                    f"\n...(Truncated, totaling {len(body)} characters)"
+                    f"\n...(Truncated, totaling {len(body)} characters)\n"
                     f"<The max_chars parameter can be increased to read more>")
         if body:
             sections.append("<Text>\n" + body + "\n</Text>")
@@ -465,7 +543,31 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
             lines = ["<Interactive Items>"]
             for item in interactive_items:
                 vis = '' if item.get('visible', True) else '  (hidden)'
-                lines.append(f"  [{item['uuid']}] {item['role']:<12}  {item['name']}{vis}")
+
+                # 构建额外属性显示
+                extra_info = ''
+
+                # 禁用状态（优先显示）
+                if item.get('disabled'):
+                    extra_info += '  [Disabled]'
+
+                # 输入框：显示当前填充值、字段标签和输入类型
+                if item.get('fill'):
+                    extra_info += f'  [Fill: {item["fill"]}]'
+                if item.get('field_label'):
+                    extra_info += f'  [Label: {item["field_label"]}]'
+                if item.get('input_type'):
+                    extra_info += f' (type={item["input_type"]})'
+
+                # 复选框/单选框：显示选中状态
+                if 'checked' in item:
+                    extra_info += f'  [Checked: {item["checked"]}]'
+
+                # 按钮：显示状态
+                if item.get('state'):
+                    extra_info += f'  [State: {item["state"]}]'
+
+                lines.append(f"  [{item['uuid']}] {item['role']:<12}  {item['name']}{vis}{extra_info}")
             lines.append("</Interactive Items>")
             sections.append("\n".join(lines))
         elif mode == "interactive":
@@ -500,7 +602,14 @@ def _refresh_item_map() -> str:
 
     parts = ["<The page has been refreshed. Consider using browser_read to get the latest information>"]
     if added:
-        lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in added.items()]
+        lines = []
+        for uid, item in added.items():
+            extra = ''
+            if item.get('field_label'):
+                extra = f'  [Label: {item["field_label"]}]'
+            elif 'checked' in item:
+                extra = f'  [Checked: {item["checked"]}]'
+            lines.append(f"  [{uid}] {item['role']}  {item['name']}{extra}")
         parts.append("<New Items>\n" + "\n".join(lines) + "\n</New Items>")
     if removed:
         lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in removed.items()]
@@ -626,25 +735,7 @@ def browser_find(text: str, max_results: int = 10) -> str:
     try:
         results = _safe_evaluate(
             _page,
-            """([needle, limit]) => {
-                const matches = [];
-                const walker = document.createTreeWalker(
-                    document.body, NodeFilter.SHOW_TEXT, null
-                );
-                let node;
-                while ((node = walker.nextNode()) && matches.length < limit) {
-                    if (!node.textContent.includes(needle)) continue;
-                    const el = node.parentElement;
-                    if (!el || el.offsetParent === null) continue;
-                    let sel = el.tagName.toLowerCase();
-                    if (el.id) sel += '#' + el.id;
-                    else if (el.className && typeof el.className === 'string')
-                        sel += '.' + el.className.trim().split(/\\s+/).join('.');
-                    const snippet = node.textContent.trim().slice(0, 80);
-                    matches.push({ tag: el.tagName.toLowerCase(), selector: sel, snippet });
-                }
-                return matches;
-            }""",
+            _load_js('find_elements.js'),
             [text, max_results],
         )
         if not results:

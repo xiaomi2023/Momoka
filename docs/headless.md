@@ -1,4 +1,4 @@
-## Headless Mode (BETA)
+# Headless Mode (BETA)
 
 Headless Mode provides the ability to interact with Momoka programmatically,
 enabling integration with backend services, batch processing tasks, container deployments, and other scenarios.
@@ -192,9 +192,3 @@ echo "$INPUT" | python main.py --headless stdio | while read -r line; do
   esac
 done
 ```
-
-## Advanced Usage
-
-### Integration with Logging System
-
-Headless mode still writes to log files (`logs/log.txt` and `logs/chat_history_log.txt`), facilitating subsequent auditing and debugging.

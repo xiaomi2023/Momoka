@@ -48,7 +48,8 @@ _console_md = Console(theme=_MARKDOWN_THEME, highlight=False)
 
 # role → rich 颜色映射（BOT 不染色）
 _ROLE_COLORS: dict[str, str] = {
-    'BROWSER':  'bright_magenta',
+    'BROWSER':  'light_steel_blue',
+    'MCP':      'light_steel_blue',
     'LOG':      'bright_cyan',
     'SHELL':    'bright_green',
     'WARN':     'bright_yellow',
@@ -170,7 +171,7 @@ class CLIUser(BaseUser):
         super().__init__()
         self._agent = None
         self._start_time = 0.0
-        self._console = Console(highlight=False)
+        self._console = Console(highlight=False, soft_wrap=True)
         self._system_monitor: SystemConfigMonitor | None = None
 
     def set_agent(self, agent):
@@ -215,7 +216,9 @@ class CLIUser(BaseUser):
         self.session.reset()
 
         while True:
+            print()
             user_message = self.get_input()
+            print()
 
             if user_message.strip() == '/end':
                 self.on_session_end(
@@ -248,9 +251,13 @@ class CLIUser(BaseUser):
                 log(f'skill trigger: {skill_name}')
                 load_result = self._agent.load_skill(skill_name)
                 if load_result.success:
+                    # 输出 Load Skill 日志（与 BOT 主动加载一致）
+                    from rich.console import Console
+                    Console().print(f'[bright_cyan]Load Skill: {skill_name}[/bright_cyan]')
                     log(f'system (skill inject): {skill_name}')
                 else:
-                    self.send_error(load_result.message)
+                    from rich.console import Console
+                    Console().print(f'[bright_red]Non-existent command or skill: {skill_name}[/bright_red]')
                 continue
 
             # 普通用户消息，交给 agent 处理
@@ -287,10 +294,15 @@ class CLIUser(BaseUser):
         if role in get_config().get('mute_log', []):
             return
 
-        # BOT 角色使用 Markdown 渲染
+        # BOT 角色：交互式终端使用 Markdown 渲染，非交互式使用纯文本输出
         if role == 'BOT':
-            md = Markdown(message)
-            _console_md.print(md, end=end)
+            if sys.stdout.isatty():
+                # 交互式终端：使用 Markdown 渲染
+                md = Markdown(message)
+                _console_md.print(md, end=end)
+            else:
+                # 非交互式终端（管道/文件）：保留原始换行符
+                self._console.print(message, end=end)
             return
 
         # Rich 染色输出
@@ -311,7 +323,6 @@ class CLIUser(BaseUser):
         mins = int(elapsed // 60)
         secs = int(elapsed % 60)
         time_str = f'{mins}min {secs}s' if mins else f'{secs}s'
-        print('-' * 73)
         print(f'Done ({time_str} | Input: {input_tokens} tokens | Output: {output_tokens} tokens | {round_count}R)')
 
     def call_wrapper(self, fn, *args, **kwargs):
