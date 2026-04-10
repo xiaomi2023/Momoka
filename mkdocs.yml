@@ -99,10 +99,10 @@ nav:
   - Quick Start: quick_start.md
   - Configuration: configuration.md
   - Commands: command.md
+  - Skill: skill.md
   - Headless Mode: headless.md
   - Momoka Server: momoka_server.md
   - MCP Integration: mcp_integration.md
-  - Skill: skill.md
 
 # 额外配置
 extra:
