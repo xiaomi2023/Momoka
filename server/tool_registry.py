@@ -168,7 +168,7 @@ def register_server_tools(
     def handler(tool_name: str, args: dict, ctx) -> ToolResult:
         # 旧版注册方式需要外部在 router.py 中处理路由
         # 这里返回一个提示，让 router.py 的特殊处理接管
-        from server import ToolResult
+        from server.types import ToolResult
         return ToolResult(text=f'__LEGACY_HANDLER__:{module_path}:{tool_name}')
     
     register_server(ServerRegistration(

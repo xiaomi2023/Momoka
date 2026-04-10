@@ -1,5 +1,5 @@
 """
-server/servers/browser/handler.py —— 浏览器工具处理器。
+server/servers/browser/browser.py —— 浏览器工具处理器。
 
 所有 browse_* 工具统一由 dispatch() 入口分发，
 browse_read 的历史去重逻辑在此处处理（需要 work_model，由 router 传入）。
@@ -38,436 +38,33 @@ browse_read 的历史去重逻辑在此处处理（需要 work_model，由 route
 
 from __future__ import annotations
 
-import hashlib
 import os
 import time
-from functools import lru_cache
-from pathlib import Path
-from typing import Optional
 from urllib.parse import quote_plus
 
 from logger import log
-from server import ToolResult, ToolContext
-
-
-# ── JavaScript 代码加载 ─────────────────────────────────────────────────────
-
-@lru_cache(maxsize=None)
-def _load_js(filename: str) -> str:
-    """加载指定名称的 JavaScript 文件内容（带缓存）。
-    
-    Args:
-        filename: JS 文件名（不含路径）
-    Returns:
-        JS 代码字符串
-    """
-    script_dir = Path(__file__).parent / 'scripts'
-    js_path = script_dir / filename
-    try:
-        return js_path.read_text(encoding='utf-8')
-    except Exception as e:
-        log(f"browser | Failed to load JS file {filename}: {e}")
-        raise
-
-# ── 导入 Playwright ────────────────────────────────────────────────────────
-from rebrowser_playwright.sync_api import sync_playwright, Page, Browser, Playwright
-
-# ── 全局单例 ──────────────────────────────────────────────────────────────
-_pw: Optional["Playwright"] = None
-_browser: Optional["Browser"] = None
-_page: Optional["Page"] = None
-
-# UUID → 元素元数据映射（每次 browse_read 后重建）
-_item_map: dict[str, dict] = {}
-
-
-# ── 可交互 role 列表（顺序决定枚举优先级）───────────────────────────────────
-_INTERACTIVE_ROLES: list[str] = [
-    'button', 'link', 'textbox', 'searchbox', 'combobox',
-    'checkbox', 'radio', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
-    'option', 'switch', 'tab', 'slider', 'spinbutton',
-    'listbox', 'treeitem', 'gridcell',
-]
-_INTERACTIVE_ROLES_SET = set(_INTERACTIVE_ROLES)
-
-
-SEARCH_ENGINES = {
-    'google': 'https://www.google.com/search?q=',
-    'bing': 'https://www.bing.com/search?q=',
-    'baidu': 'https://www.baidu.com/s?wd=',
-    'duckduckgo': 'https://duckduckgo.com/?q=',
-}
-
-
-def _timeout_ms() -> int:
-    try:
-        from config import get_config
-        return get_config().get('wait', 10) * 1000
-    except Exception:
-        return 10_000
-
-
-def _make_uid(role: str, locator_name: str, index: int, seen: set) -> str:
-    """基于 role + locator_name + index.md 生成稳定的 6 位 16 进制 ID，碰撞时加后缀。"""
-    raw = hashlib.md5(f"{role}|{locator_name}|{index}".encode()).hexdigest()[:6]
-    uid = raw
-    while uid in seen:
-        uid += "x"
-    seen.add(uid)
-    return uid
-
-
-_CONTEXT_ERR = "Cannot find context with specified id"
-
-
-def _safe_evaluate(page: "Page", script, arg=None, *, retries: int = 4,
-                   base_delay: float = 0.4) -> object:
-    """带重试的 page.evaluate()，专门应对 rebrowser-playwright context 竞态。
-
-    rebrowser 每次导航后会重新注入反检测脚本，旧 context 会短暂失效，
-    直接调用 evaluate() 会抛出 "Cannot find context with specified id"。
-    本函数以指数退避重试，彻底消除该竞态窗口。
-
-    Args:
-        page:       Playwright Page 对象。
-        script:     传给 page.evaluate() 的 JS 字符串或函数。
-        arg:        可选参数，透传给 evaluate()。
-        retries:    最大重试次数（默认 4）。
-        base_delay: 首次重试等待秒数，后续翻倍（默认 0.4s）。
-    Returns:
-        evaluate() 的返回值。
-    Raises:
-        最后一次异常（非 context 错误会立即抛出）。
-    """
-    delay = base_delay
-    last_exc: Exception | None = None
-    for attempt in range(retries + 1):
-        try:
-            if arg is not None:
-                return page.evaluate(script, arg)
-            return page.evaluate(script)
-        except Exception as e:
-            err_str = str(e)
-            if _CONTEXT_ERR not in err_str:
-                raise  # 非 context 错误，立即抛出
-            last_exc = e
-            if attempt < retries:
-                log(f"browser | _safe_evaluate context error (attempt {attempt + 1}/{retries}), "
-                    f"retry in {delay:.1f}s...")
-                time.sleep(delay)
-                delay = min(delay * 2, 3.0)  # 指数退避，上限 3 秒
-    raise last_exc
-
-
-_USER_AGENT = (
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-    'AppleWebKit/537.36 (KHTML, like Gecko) '
-    'Chrome/123.0.0.0 Safari/537.36'
+from server.types import ToolResult, ToolContext
+from server.servers.browser.util import (
+    _load_js,
+    _safe_evaluate,
+    _timeout_ms,
+    SEARCH_ENGINES,
 )
-
-_LAUNCH_ARGS = [
-    '--disable-blink-features=AutomationControlled',
-    '--no-sandbox',
-    '--disable-dev-shm-usage',
-]
-
-
-def _ensure_browser(headless: bool = True) -> "Page":
-    global _pw, _browser, _page
-
-    if _page is None or _page.is_closed():
-        if _browser is None or not _browser.is_connected():
-            if _pw is None:
-                _pw = sync_playwright().start()
-            _browser = _pw.chromium.launch(headless=headless, args=_LAUNCH_ARGS)
-        _page = _browser.new_page(user_agent=_USER_AGENT)
-        log("browser | New browser page created [rebrowser-playwright]")
-
-        # 等待 rebrowser 反检测脚本注入完成，确保 JS context 稳定
-        # rebrowser-playwright 会在页面创建后异步注入补丁，此期间 context 不可用
-        try:
-            _page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass  # 新页面通常已加载，超时无妨
-        # 用简单 evaluate 探测 context 是否就绪，带短延迟重试
-        for attempt in range(3):
-            try:
-                _page.evaluate("1")  # 最小化探测
-                break
-            except Exception as e:
-                if _CONTEXT_ERR in str(e) and attempt < 2:
-                    time.sleep(0.3 * (attempt + 1))
-                else:
-                    break  # 非 context 错误或已达上限
-
-    return _page
-
-
-# ── 无障碍树解析（基于 locator，兼容新版 Playwright）────────────────────
-
-def _parse_ax_tree(page: "Page") -> tuple[list[str], list[dict]]:
-    """用 locator 查询页面，返回 (text_lines, interactive_items)。
-
-    text_lines:        页面正文文字行列表（过滤空行，支持 Markdown 格式）
-    interactive_items: list of {uuid, role, name, locator_index, ...}
-        - uuid:           8 位唯一 ID
-        - role:           小写 role 字符串
-        - name:           可访问名称（已保证非空）
-        - locator_index:  该 role+name 组合下的第几个元素（0-based，用于精确定位）
-        - href:           链接的绝对 URL（仅 link 角色）
-        - action:         按钮的表单动作（仅 button 角色）
-        - field_label:    输入框的标签文字（仅 input 类角色）
-    """
-    text_lines: list[str] = []
-    interactive_items: list[dict] = []
-
-    # ── 正文：通过 JS 遍历可见文字节点，增强 Markdown 转换 ────────────────
-    _js_text = _load_js('extract_text.js')
-    try:
-        raw_text = _safe_evaluate(page, _js_text)
-        text_lines = [t for t in (raw_text or []) if t.strip()]
-    except Exception as e:
-        log(f"browser | text extraction error: {e}")
-
-    # ── 可交互元素：按 role 逐一查询，跳过链接（链接已在 MD 文本中显示 URL）───
-    seen_uids: set = set()
-    for role in _INTERACTIVE_ROLES:
-        try:
-            locator = page.get_by_role(role)  # type: ignore[arg-type]
-            count = locator.count()
-            if count == 0:
-                continue
-            for i in range(count):
-                el = locator.nth(i)
-                try:
-                    _input_roles = {'textbox', 'searchbox', 'combobox', 'spinbutton'}
-                    if role in _input_roles:
-                        locator_name = (el.get_attribute('placeholder') or '').strip()
-                        if not locator_name:
-                            locator_name = (el.get_attribute('aria-label') or '').strip()
-                        if not locator_name:
-                            locator_name = (el.get_attribute('title') or '').strip()
-                        name = locator_name  # name 恢复为正常显示名称
-                    else:
-                        locator_name = (el.inner_text(timeout=500) or '').strip()
-                        if not locator_name:
-                            locator_name = (el.get_attribute('aria-label') or '').strip()
-                        if not locator_name:
-                            locator_name = (el.get_attribute('placeholder') or '').strip()
-                        if not locator_name:
-                            locator_name = (el.get_attribute('title') or '').strip()
-                        if not locator_name:
-                            locator_name = (el.get_attribute('value') or '').strip()
-                        name = locator_name
-                except Exception:
-                    name = ''
-                    locator_name = ''
-
-                if not locator_name:
-                    continue  # 无任何标识，跳过
-
-                if not name:
-                    name = locator_name
-
-                try:
-                    visible = el.is_visible()
-                except Exception:
-                    visible = False
-
-                try:
-                    disabled = el.is_disabled()
-                except Exception:
-                    disabled = False
-
-                uid = _make_uid(role, locator_name, i, seen_uids)
-
-                # 构建扩展属性
-                extra_attrs = {}
-                if disabled:
-                    extra_attrs['disabled'] = True
-                
-                # 按钮：提取 pressed/expanded 状态
-                if role == 'button':
-                    try:
-                        action = (el.get_attribute('aria-pressed') or
-                                 el.get_attribute('aria-expanded') or '')
-                        if action:
-                            extra_attrs['state'] = action
-                    except Exception:
-                        pass
-
-                # 输入框：提取字段标签和当前填充值
-                elif role in {'textbox', 'searchbox', 'combobox', 'spinbutton'}:
-                    try:
-                        # 尝试获取关联的 label
-                        field_id = (el.get_attribute('id') or '').strip()
-                        if field_id:
-                            try:
-                                label_el = page.locator(f'label[for="{field_id}"]')
-                                if label_el.count() > 0:
-                                    extra_attrs['field_label'] = (label_el.inner_text(timeout=500) or '').strip()
-                            except Exception:
-                                pass
-                        # 获取当前填充值
-                        current_val = (el.input_value(timeout=500) or '').strip()
-                        if current_val:
-                            extra_attrs['fill'] = current_val
-                        # 获取输入类型
-                        input_type = (el.get_attribute('type') or 'text').strip()
-                        if input_type != 'text':
-                            extra_attrs['input_type'] = input_type
-                    except Exception:
-                        pass
-                
-                # 复选框/单选框：提取选中状态
-                elif role in {'checkbox', 'radio'}:
-                    try:
-                        checked = (el.get_attribute('aria-checked') or 
-                                 el.is_checked() if hasattr(el, 'is_checked') else False)
-                        extra_attrs['checked'] = str(checked) == 'true' or checked is True
-                    except Exception:
-                        pass
-                
-                interactive_items.append({
-                    'uuid': uid,
-                    'role': role,
-                    'name': name,
-                    'locator_name': locator_name,
-                    'locator_index': i,
-                    'visible': visible,
-                    **extra_attrs,
-                })
-        except Exception as e:
-            log(f"browser | role={role} query error: {e}")
-
-    return text_lines, interactive_items
-
-
-def _resolve_element(page: "Page", item: dict) -> Optional[object]:
-    """根据 role + locator_name 精确定位 ElementHandle，优先取可见元素。
-
-    定位策略（按优先级）：
-      1. get_by_role(role, name=name, exact=True)   — 通用首选
-      2. [仅 input 类] get_by_placeholder(name)     — textbox 常用 placeholder 作为标识
-      3. [仅 input 类] get_by_label(name)           — 关联 <label> 文字
-      4. [仅 input 类] CSS [id=...] / [name=...]    — 直接属性匹配
-      5. get_by_text(name, exact=True)              — 兜底文字匹配
-    """
-    role = item['role']
-    name = item['locator_name'] if item.get('locator_name') else item['name']
-    idx = item.get('locator_index', 0)
-    _input_roles = {'textbox', 'searchbox', 'combobox', 'spinbutton'}
-
-    def _first_visible(locator) -> Optional[object]:
-        """从 locator 中取第一个可见 ElementHandle；全不可见则取 nth(idx)。"""
-        try:
-            count = locator.count()
-        except Exception:
-            return None
-        if count == 0:
-            return None
-        for i in range(count):
-            try:
-                handle = locator.nth(i).element_handle(timeout=1000)
-                if handle and handle.is_visible():
-                    if i != idx:
-                        log(f"browser | _resolve_element skipped invisible nth({idx}), using nth({i})")
-                    return handle
-            except Exception:
-                continue
-        try:
-            return locator.nth(idx).element_handle(timeout=3000)
-        except Exception as e:
-            log(f"browser | _resolve_element nth({idx}) fallback error: {e}")
-        return None
-
-    # ── 策略 1：get_by_role ───────────────────────────────────────────────
-    try:
-        h = _first_visible(page.get_by_role(role, name=name, exact=True))  # type: ignore[arg-type]
-        if h:
-            return h
-    except Exception as e:
-        log(f"browser | _resolve_element get_by_role error role={role} name={name!r}: {e}")
-
-    # ── 策略 2 & 3 & 4：仅 input 类元素 ───────────────────────────────────
-    if role in _input_roles:
-        # 2. placeholder 精确匹配
-        try:
-            h = _first_visible(page.get_by_placeholder(name, exact=True))
-            if h:
-                log(f"browser | _resolve_element hit placeholder {name!r}")
-                return h
-        except Exception:
-            pass
-
-        # 3. 关联 label 文字
-        try:
-            h = _first_visible(page.get_by_label(name, exact=True))
-            if h:
-                log(f"browser | _resolve_element hit label {name!r}")
-                return h
-        except Exception:
-            pass
-
-        # 4. CSS 属性：[placeholder=...] / [aria-label=...] / [name=...]
-        for attr in ('placeholder', 'aria-label', 'name'):
-            try:
-                sel = f'[{attr}="{name}"]'
-                locator = page.locator(sel)
-                h = _first_visible(locator)
-                if h:
-                    log(f"browser | _resolve_element hit css {sel}")
-                    return h
-            except Exception:
-                continue
-
-    # ── 策略 5：按可见文字兜底 ────────────────────────────────────────────
-    try:
-        h = _first_visible(page.get_by_text(name, exact=True))
-        if h:
-            return h
-    except Exception as e:
-        log(f"browser | _resolve_element get_by_text error name={name!r}: {e}")
-
-    return None
-
-
-# ── 辅助：新标签页检测 ───────────────────────────────────────────────────
-
-def _maybe_switch_to_new_tab():
-    """如果出现了新标签页，自动切换到最新的那个。"""
-    global _page
-    try:
-        pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
-        if len(pages) > 1:
-            latest = pages[-1]
-            if latest != _page and not latest.is_closed():
-                old_url = _page.url
-                _page = latest
-                _page.bring_to_front()
-                log(f"browser | New tab detected, auto-switched: {old_url} → {_page.url}")
-    except Exception as e:
-        log(f"browser | New tab detection failed: {e}")
-
-
-# ── 辅助：标签页列表 ─────────────────────────────────────────────────────
-
-def _get_tabs_info() -> str:
-    try:
-        pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
-        if not pages:
-            return ""
-        lines = []
-        for i, p in enumerate(pages):
-            marker = " ◀ Current" if p == _page else ""
-            try:
-                title = p.title() or "(Untitled)"
-            except Exception:
-                title = "(unavailable)"
-            lines.append(f"  [{i}] {title}  {p.url}{marker}")
-        return "<Tab list>\n" + "\n".join(lines) + "\n</Tab list>"
-    except Exception:
-        return ""
+from server.servers.browser.browser_state import (
+    get_page,
+    get_item_map,
+    set_item_map,
+    _ensure_browser,
+    _maybe_switch_to_new_tab,
+    _get_tabs_info,
+    is_browser_open,
+    browser_close,
+)
+from server.servers.browser.accessibility import (
+    _parse_ax_tree,
+    _resolve_element,
+    _refresh_item_map,
+)
 
 
 # ── 核心操作函数 ─────────────────────────────────────────────────────────
@@ -505,8 +102,8 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
         "text"        — 只显示页面正文
         "all"         — 正文 + 可交互元素（默认）
     """
-    global _page, _item_map
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
     # 检测新标签页
@@ -515,12 +112,12 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
     if mode not in ("interactive", "text", "all"):
         mode = "all"
 
-    text_lines, interactive_items = _parse_ax_tree(_page)
+    text_lines, interactive_items = _parse_ax_tree(page)
 
     # 重建 UUID 映射
-    _item_map = {item['uuid']: item for item in interactive_items}
+    set_item_map({item['uuid']: item for item in interactive_items})
 
-    header = f"<Current: {_page.url}>\n<Read mode: {mode}>\n"
+    header = f"<Current: {page.url}>\n<Read mode: {mode}>\n"
     tabs_info = _get_tabs_info()
     if tabs_info:
         header += tabs_info + "\n"
@@ -577,61 +174,19 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
     return header + "\n".join(sections)
 
 
-def _refresh_item_map() -> str:
-    """等待页面稳定后重建 UUID 映射，返回新增/消失的元素 diff。"""
-    global _item_map
-    _maybe_switch_to_new_tab()
-    try:
-        _page.wait_for_load_state("domcontentloaded", timeout=_timeout_ms())
-    except Exception:
-        pass
-    try:
-        _page.wait_for_load_state("networkidle", timeout=3000)
-    except Exception:
-        pass
-    time.sleep(0.3)
-
-    old_map = _item_map
-    _, interactive_items = _parse_ax_tree(_page)
-    new_map = {item['uuid']: item for item in interactive_items}
-    _item_map = new_map
-    log(f"browser | _refresh_item_map → {len(_item_map)} interactive elements")
-
-    added = {uid: item for uid, item in new_map.items() if uid not in old_map}
-    removed = {uid: item for uid, item in old_map.items() if uid not in new_map}
-
-    parts = ["<The page has been refreshed. Consider using browser_read to get the latest information>"]
-    if added:
-        lines = []
-        for uid, item in added.items():
-            extra = ''
-            if item.get('field_label'):
-                extra = f'  [Label: {item["field_label"]}]'
-            elif 'checked' in item:
-                extra = f'  [Checked: {item["checked"]}]'
-            lines.append(f"  [{uid}] {item['role']}  {item['name']}{extra}")
-        parts.append("<New Items>\n" + "\n".join(lines) + "\n</New Items>")
-    if removed:
-        lines = [f"  [{uid}] {item['role']}  {item['name']}" for uid, item in removed.items()]
-        parts.append("<Missing Items>\n" + "\n".join(lines) + "\n</Missing Items>")
-    if not added and not removed:
-        parts.append("<Item list has not changed>")
-
-    return "\n".join(parts)
-
-
 def browser_click(element_uuid: str) -> str:
     """点击指定 UUID 对应的可交互元素。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '<The Mapping is empty, consider calling browse_read first>'
+        known = ', '.join(get_item_map().keys()) or '<The Mapping is empty, consider calling browse_read first>'
         return f"<Failed to Click: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
-    handle = _resolve_element(_page, item)
+    handle = _resolve_element(page, item)
     if handle is None:
         return f"<Failed to Click: Cannot locate element {label}>"
 
@@ -647,12 +202,13 @@ def browser_click(element_uuid: str) -> str:
 
 def browser_fill(element_uuid: str, text: str) -> str:
     """向指定 UUID 对应的 textbox / searchbox / combobox 填充文字。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '<The Mapping is empty, consider calling browse_read first>'
+        known = ', '.join(get_item_map().keys()) or '<The Mapping is empty, consider calling browse_read first>'
         return f"<Failed to Fill: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     role = item['role']
@@ -663,7 +219,7 @@ def browser_fill(element_uuid: str, text: str) -> str:
         return (f"<Failed to Fill: Element {label} type is {role!r}. Text fill not supported>"
                 f"<Supported types: {', '.join(sorted(_fillable))}>")
 
-    handle = _resolve_element(_page, item)
+    handle = _resolve_element(page, item)
     if handle is None:
         return f"<Failed to Fill: Cannot locate element {label}>"
 
@@ -679,11 +235,12 @@ def browser_fill(element_uuid: str, text: str) -> str:
 
 def browser_eval(script: str) -> str:
     """在当前页面执行 JavaScript，返回结果字符串。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
     try:
-        result = _safe_evaluate(_page, script)
-        _page.wait_for_load_state("networkidle", timeout=_timeout_ms())
+        result = _safe_evaluate(page, script)
+        page.wait_for_load_state("networkidle", timeout=_timeout_ms())
         log(f"browser | EVAL result: {result}")
         base_msg = f"JavaScript execution result: {result}"
         async_keywords = ['setTimeout', 'setInterval', 'Promise', 'async', 'await']
@@ -705,16 +262,17 @@ def browser_press(element_uuid: str, key: str) -> str:
     按键后自动刷新 UUID 映射。
     常用 key 值: Enter, Tab, Escape, ArrowDown, ArrowUp, Backspace
     """
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
         return f"<Failed to Press: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
-    handle = _resolve_element(_page, item)
+    handle = _resolve_element(page, item)
     if handle is None:
         return f"<Failed to Press: Cannot locate element {label}>"
 
@@ -730,11 +288,12 @@ def browser_press(element_uuid: str, key: str) -> str:
 
 def browser_find(text: str, max_results: int = 10) -> str:
     """在当前页面中搜索包含指定文字的可见元素。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
     try:
         results = _safe_evaluate(
-            _page,
+            page,
             _load_js('find_elements.js'),
             [text, max_results],
         )
@@ -743,7 +302,7 @@ def browser_find(text: str, max_results: int = 10) -> str:
         lines = [f"<Found {len(results)} elements containing {text!r} on the page:>"]
         for i, r in enumerate(results, 1):
             matched_uuid = next(
-                (uid for uid, item in _item_map.items() if text in item['name']),
+                (uid for uid, item in get_item_map().items() if text in item['name']),
                 None
             )
             uuid_hint = (f"  → UUID: {matched_uuid}" if matched_uuid
@@ -766,7 +325,8 @@ def browser_pdf(save_dir: str = ".") -> str:
     headless 模式：直接调用 page.pdf()。
     有头模式（rebrowser）：通过 CDP Page.printToPDF 命令实现，效果等同。
     """
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
     try:
         import base64
@@ -774,7 +334,7 @@ def browser_pdf(save_dir: str = ".") -> str:
         filename = os.path.join(save_dir, f"page_{int(time.time())}.pdf")
 
         # 有头模式下 page.pdf() 不可用，改用 CDP Page.printToPDF
-        cdp = _page.context.new_cdp_session(_page)
+        cdp = page.context.new_cdp_session(page)
         result = cdp.send("Page.printToPDF", {
             "printBackground": True,
             "paperWidth": 8.27,   # A4 英寸
@@ -794,11 +354,12 @@ def browser_pdf(save_dir: str = ".") -> str:
 
 def browser_wait_for_navigation(timeout: int = None, state: str = "networkidle") -> str:
     """等待页面导航完成。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
     try:
         timeout_ms = (timeout if timeout is not None else (_timeout_ms() // 1000)) * 1000
-        _page.wait_for_load_state(state, timeout=timeout_ms)
+        page.wait_for_load_state(state, timeout=timeout_ms)
         log(f"browser | WAIT completed: state={state}")
         return f"<Page load completed (state: {state})>"
     except Exception as e:
@@ -835,17 +396,19 @@ def browser_search(query: str, engine: str = 'google') -> str:
 
 def browser_switch(index: int) -> str:
     """切换到指定编号的标签页。"""
-    global _page
+    from server.servers.browser.browser_state import get_browser, set_page
+    browser = get_browser()
+    page = get_page()
     try:
-        pages = _browser.contexts[0].pages if _browser and _browser.is_connected() else []
+        pages = browser.contexts[0].pages if browser and browser.is_connected() else []
         if not pages:
             return "<No tabs currently open>"
         if index < 0 or index >= len(pages):
             return f"<Index {index} out of range, currently {len(pages)} tabs open (0 ~ {len(pages)-1})>"
-        _page = pages[index]
-        _page.bring_to_front()
-        log(f"browser | SWITCH → [{index}] {_page.url}")
-        return f"<Switched to tab [{index}]: {_page.title()}  {_page.url}>"
+        set_page(pages[index])
+        pages[index].bring_to_front()
+        log(f"browser | SWITCH → [{index}] {pages[index].url}")
+        return f"<Switched to tab [{index}]: {pages[index].title()}  {pages[index].url}>"
     except Exception as e:
         log(f"browser | SWITCH error: {e}")
         return f"<Failed to switch tab: {e}>"
@@ -853,16 +416,17 @@ def browser_switch(index: int) -> str:
 
 def browser_hover(element_uuid: str) -> str:
     """将鼠标悬停在指定 UUID 对应的元素上，触发 hover 事件（如展开下拉菜单）。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
         return f"<Failed to Hover: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
-    handle = _resolve_element(_page, item)
+    handle = _resolve_element(page, item)
     if handle is None:
         return f"<Failed to Hover: Cannot locate element {label}>"
 
@@ -879,26 +443,27 @@ def browser_hover(element_uuid: str) -> str:
 def browser_select(element_uuid: str, value: str) -> str:
     """在指定 UUID 对应的 <select> 下拉框中选择选项。
 
-    value 可以是选项的 value 属性、label 文字，或 index.md（如 "0"、"1"）。
+    value 可以是选项的 value 属性、label 文字，或 index（如 "0"、"1"）。
     """
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
         return f"<Failed to Select: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
-    handle = _resolve_element(_page, item)
+    handle = _resolve_element(page, item)
     if handle is None:
         return f"<Failed to Select: Cannot locate element {label}>"
 
     try:
-        # 尝试按 value、label、index.md 依次匹配
+        # 尝试按 value、label、index 依次匹配
         select_args: dict = {}
         if value.isdigit():
-            select_args['index.md'] = int(value)
+            select_args['index'] = int(value)
         else:
             select_args['label'] = value  # Playwright 会自动 fallback 到 value
 
@@ -908,7 +473,7 @@ def browser_select(element_uuid: str, value: str) -> str:
         refresh_msg = _refresh_item_map()
         return f"<Selected in {label}: {selected}>\n{refresh_msg}"
     except Exception:
-        # index.md 匹配失败时回退到按 value 精确匹配
+        # index 匹配失败时回退到按 value 精确匹配
         try:
             selected = handle.select_option(value=value, timeout=_timeout_ms())
             log(f"browser | SELECT (value fallback) {label} → {selected}")
@@ -921,11 +486,12 @@ def browser_select(element_uuid: str, value: str) -> str:
 
 def browser_get_url() -> str:
     """返回当前页面的 URL 和标题，用于快速确认页面状态而无需完整读取内容。"""
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
     try:
-        url = _page.url
-        title = _page.title() or "(No title)"
+        url = page.url
+        title = page.title() or "(No title)"
         log(f"browser | GET_URL {url}")
         return f"<Current Page>\n  URL:   {url}\n  Title: {title}"
     except Exception as e:
@@ -942,7 +508,8 @@ def browser_scroll(direction: str = "down", amount: int = 500,
         amount:       滚动像素数，默认 500。
         element_uuid: 可选。若传入则滚动该元素内部，否则滚动整个页面。
     """
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
     direction = direction.lower()
@@ -959,10 +526,10 @@ def browser_scroll(direction: str = "down", amount: int = 500,
 
     try:
         if element_uuid:
-            item = _item_map.get(element_uuid)
+            item = get_item_map().get(element_uuid)
             if item is None:
                 return f"<Failed to Scroll: ID {element_uuid!r} does not exist, consider calling browse_read first>"
-            handle = _resolve_element(_page, item)
+            handle = _resolve_element(page, item)
             if handle is None:
                 return f"<Failed to Scroll: Cannot locate element [{element_uuid}]>"
             handle.evaluate(
@@ -970,7 +537,7 @@ def browser_scroll(direction: str = "down", amount: int = 500,
             )
             label = f"element [{element_uuid}] \"{item['name']}\""
         else:
-            _safe_evaluate(_page, f"window.scrollBy({delta_x}, {delta_y})")
+            _safe_evaluate(page, f"window.scrollBy({delta_x}, {delta_y})")
             label = "page"
 
         log(f"browser | SCROLL {label} {direction} {amount}px")
@@ -989,7 +556,8 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
         file_paths:   本地文件路径，字符串（单文件）或列表（多文件）。
                       路径必须是绝对路径或相对于当前工作目录的路径。
     """
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
     if isinstance(file_paths, str):
@@ -1000,17 +568,17 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
     if missing:
         return f"<Upload failed: The following files does not exist:\n" + "\n".join(f"  {p}" for p in missing) + ">"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
         return f"<Failed to Upload: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
 
     try:
         # Playwright 推荐用 expect_file_chooser 监听文件对话框
-        with _page.expect_file_chooser(timeout=_timeout_ms()) as fc_info:
-            handle = _resolve_element(_page, item)
+        with page.expect_file_chooser(timeout=_timeout_ms()) as fc_info:
+            handle = _resolve_element(page, item)
             if handle is None:
                 return f"<Failed to Upload: Cannot locate element {label}>"
             handle.click(timeout=_timeout_ms())
@@ -1022,7 +590,7 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
     except Exception as e:
         # 回退：直接对 input[type=file] 调用 set_input_files
         try:
-            handle = _resolve_element(_page, item)
+            handle = _resolve_element(page, item)
             if handle is None:
                 return f"<Failed to Upload: Cannot locate element {label}: {e}>"
             handle.set_input_files(file_paths, timeout=_timeout_ms())
@@ -1042,12 +610,13 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
         element_uuid: browse_read 返回的元素 UUID。
         save_dir:     文件保存目录，默认为当前工作目录。
     """
-    if _page is None or _page.is_closed():
+    page = get_page()
+    if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
 
-    item = _item_map.get(element_uuid)
+    item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(_item_map.keys()) or '(Mapping is empty, consider calling browse_read first)'
+        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
         return f"<Failed to Download: ID {element_uuid!r} does not exist. Available IDs: {known}>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
@@ -1056,8 +625,8 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
         os.makedirs(save_dir, exist_ok=True)
         from config import get_config
         download_timeout_ms = get_config().get('wait_download', 60) * 1000
-        with _page.expect_download(timeout=download_timeout_ms) as dl_info:
-            handle = _resolve_element(_page, item)
+        with page.expect_download(timeout=download_timeout_ms) as dl_info:
+            handle = _resolve_element(page, item)
             if handle is None:
                 return f"<Failed to Download: Cannot locate element {label}>"
             handle.click(timeout=_timeout_ms())
@@ -1072,35 +641,6 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
     except Exception as e:
         log(f"browser | DOWNLOAD error {label}: {e}")
         return f"<Failed to Download {label}: {e}>"
-
-
-def browser_close() -> str:
-    """关闭浏览器及 Playwright 实例。"""
-    global _pw, _browser, _page
-    try:
-        if _page and not _page.is_closed():
-            _page.close()
-        if _browser and _browser.is_connected():
-            _browser.close()
-        if _pw:
-            _pw.stop()
-        _page = _browser = _pw = None
-        _item_map.clear()
-        log("browser | Browser closed")
-        return "<Browser closed>"
-    except Exception as e:
-        log(f"browser | CLOSE error: {e}")
-        return f"<Error closing browser: {e}>"
-
-
-def is_browser_open() -> bool:
-    """检查浏览器是否已打开且可用。"""
-    global _page, _browser
-    if _page is None or _page.is_closed():
-        return False
-    if _browser is None or not _browser.is_connected():
-        return False
-    return True
 
 
 # ── 工具分发处理器 ─────────────────────────────────────────────────────────
@@ -1165,7 +705,7 @@ def _read(args: dict, ctx: ToolContext, work_model=None) -> ToolResult:
 
     # 构造文件键
     try:
-        current_url = _page.url if _page and not _page.is_closed() else None
+        current_url = get_page().url if get_page() and not get_page().is_closed() else None
     except Exception:
         current_url = None
     file_key = f'browse_read:{current_url}' if current_url else None
@@ -1174,7 +714,7 @@ def _read(args: dict, ctx: ToolContext, work_model=None) -> ToolResult:
     if work_model and file_key:
         prev = next(
             (m['file_contents'][file_key]
-             for m in reversed(work_model._meta)
+             for m in reversed(work_model.meta)
              if file_key in m.get('file_contents', {})),
             None,
         )

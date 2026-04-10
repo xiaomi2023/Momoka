@@ -1,4 +1,4 @@
-# MCP Server Integration Guide (BETA)
+# MCP Server (BETA)
 
 ### Table of Contents
 

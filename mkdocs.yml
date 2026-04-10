@@ -102,7 +102,7 @@ nav:
   - Skill: skill.md
   - Headless Mode: headless.md
   - Momoka Server: momoka_server.md
-  - MCP Integration: mcp_integration.md
+  - MCP Server: mcp_server.md
 
 # 额外配置
 extra:

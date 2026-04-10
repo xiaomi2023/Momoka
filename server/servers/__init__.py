@@ -26,7 +26,7 @@ from typing import Callable
 
 import dataclasses
 
-from server import ToolResult, ToolContext, UnknownToolError
+from server.types import ToolResult, ToolContext, UnknownToolError
 
 from logger import log
 

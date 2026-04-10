@@ -6,7 +6,7 @@ All MCP tools are uniformly dispatched through this handler.
 
 from __future__ import annotations
 
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 from server.servers.mcp.tooldef import is_mcp_available
 from config import get_working_config
 

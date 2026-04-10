@@ -102,23 +102,69 @@ class Momoka:
     def load_skill(self, skill_name: str) -> SkillLoadResult:
         """Load specified skill and inject into system prompt."""
         from server.router import _execute_tool
-        from server import ToolContext
+        from server.types import ToolContext
         from config import get_config
-        
+
         cfg = get_config()
         ctx = ToolContext(cfg=cfg, input_func=input)
         result = _execute_tool('get_skill', {'skill_name': skill_name}, ctx)
-        
+
         # result is a ToolResult object
         skill_text = result.text
         has_file_contents = bool(result.file_contents)
-        
+
         if has_file_contents:
             self._model.inject_skill(skill_name, skill_text)
             log(f'momoka.load_skill | Injected: {skill_name}')
             return SkillLoadResult(success=True, message=skill_text)
         else:
             return SkillLoadResult(success=False, message=skill_text)
+
+    def initialize_project(self) -> bool:
+        """Generate AGENTS.md file for the current project.
+        
+        Returns:
+            True if generation succeeded, False otherwise.
+        """
+        import os
+        from logger import log
+
+        # 读取提示词模板
+        init_prompt_path = os.path.join(
+            os.path.dirname(__file__),
+            'prompt',
+            'init.md'
+        )
+
+        try:
+            with open(init_prompt_path, 'r', encoding='utf-8') as f:
+                init_prompt = f.read()
+        except FileNotFoundError:
+            log('init | Error: init prompt template not found')
+            return False
+        except Exception as e:
+            log(f'init | Error: Failed to read init prompt: {e}')
+            return False
+
+        log('init | Generating AGENTS.md')
+
+        try:
+            # 使用 Agent 循环处理生成任务
+            result = self.send(
+                init_prompt,
+                file_contents=self._user.session.file_contents if self._user else None
+            )
+
+            # 如果完成了，调用 finish_task 清理
+            if result.is_finish:
+                self.finish_task()
+
+            log('init | Generation completed')
+            return result.is_finish
+
+        except Exception as e:
+            log(f'init | Error: {e}')
+            return False
 
     def finish_task(self):
         """Clear all injected skills after task completion."""
@@ -192,7 +238,7 @@ class Momoka:
 
     def _load_preset_conversations(self):
         """Load preset conversations from file."""
-        preset_file = os.path.join(os.path.dirname(__file__), 'prompt', 'preset_convs.md')
+        preset_file = os.path.join(os.path.dirname(__file__), 'prompt', 'preset_convs.json')
         try:
             with open(preset_file, 'r', encoding='utf-8') as f:
                 preset_convs = json.load(f)

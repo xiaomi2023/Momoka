@@ -67,7 +67,6 @@ TITLE = r"""
 |  |  |  | |  `--'  | |  |  |  | |  `--'  | |     \   /  _____  \  
 |__|  |__|  \______/  |__|  |__|  \______/  |__|\__\ /__/     \__\ 
 """
-LINE = '-' * 18
 INFO = " " * 7 + 'Developed by Mikoris | For more help, type /help'
 
 
@@ -87,18 +86,22 @@ class Spinner:
 
     def _check_input_windows(self):
         """Windows 平台：使用 msvcrt 检测按键。"""
-        import msvcrt
-        while not self._stop.is_set():
-            if msvcrt.kbhit():
-                key = msvcrt.getch()
-                if key == b'\x1b':  # ESC
-                    self._interrupted.set()
-                    if self._status is not None:
-                        self._status.update(self._MSG_INTERRUPTING)
-                    while msvcrt.kbhit():
-                        msvcrt.getch()
-                    break
-            time.sleep(0.05)
+        try:
+            import msvcrt
+            while not self._stop.is_set():
+                if msvcrt.kbhit():
+                    key = msvcrt.getch()
+                    if key == b'\x1b':  # ESC
+                        self._interrupted.set()
+                        if self._status is not None:
+                            self._status.update(self._MSG_INTERRUPTING)
+                        while msvcrt.kbhit():
+                            msvcrt.getch()
+                        break
+                time.sleep(0.05)
+        except Exception:
+            # 如果检测失败，静默退出，不影响 spinner 正常显示
+            pass
 
     def _check_input_unix(self):
         """Unix/Linux/Mac 平台：使用 termios 和 select 检测按键。"""
@@ -247,6 +250,11 @@ class CLIUser(BaseUser):
                 log(f'main | repair_history: filled in {repaired} orphaned tool_results')
 
             if handled and skill_name is not None:
+                # /init 命令：生成 AGENTS.md
+                if skill_name == '__init__':
+                    self._handle_init_command()
+                    continue
+                
                 # /skill_name 强制加载 skill
                 log(f'skill trigger: {skill_name}')
                 load_result = self._agent.load_skill(skill_name)
@@ -317,6 +325,27 @@ class CLIUser(BaseUser):
 
     def on_task_finish(self) -> None:
         self.user_log('Ready')
+
+    def _handle_init_command(self) -> None:
+        """处理 /init 命令，委托 Agent 层生成 AGENTS.md 文件。"""
+        from rich.console import Console
+
+        console = Console()
+
+        # 显示正在生成的提示
+        console.print('[bright_cyan]Generating AGENTS.md...[/bright_cyan]')
+
+        # 委托给 Agent 层处理
+        try:
+            success = self._agent.initialize_project()
+
+            if success:
+                console.print('[bright_green]AGENTS.md generated successfully[/bright_green]')
+            else:
+                console.print('[bright_red]Failed to generate AGENTS.md[/bright_red]')
+
+        except Exception as e:
+            console.print(f'[bright_red]Failed to generate AGENTS.md: {e}[/bright_red]')
 
     def on_session_end(self, input_tokens: int, output_tokens: int,
                        round_count: int, elapsed: float) -> None:

@@ -89,12 +89,20 @@ def set_read_limits(max_lines: int | None = None, max_size_kb: int | None = None
 
 
 # ── 模块加载时初始化运行时状态 ────────────────────────────────────────────────
+# 注意：此函数应在程序入口（main.py）显式调用，而非导入时自动执行
 # 将 where 重置为 work_dir，确保每次启动从工作目录开始
-_static = json.load(open(CONFIG_FILE, encoding='utf-8'))
-_update_working_config(
-    where=_static['work_dir'],
-    wait=10,
-    wait_download=60,
-    read_max_lines=1000,
-    read_max_size_kb=100,
-)
+
+def initialize_working_config():
+    """初始化运行时配置，确保每次启动从默认工作目录开始。
+    
+    应在程序入口（main.py）启动时显式调用一次。
+    """
+    with open(CONFIG_FILE, encoding='utf-8') as f:
+        _static = json.load(f)
+    _update_working_config(
+        where=_static['work_dir'],
+        wait=10,
+        wait_download=60,
+        read_max_lines=1000,
+        read_max_size_kb=100,
+    )

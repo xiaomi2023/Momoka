@@ -13,7 +13,7 @@ from pathlib import Path
 
 from config import get_config
 from logger import log
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 
 
 # ── grep 工具处理器 ─────────────────────────────────────────────────────────

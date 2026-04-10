@@ -9,13 +9,14 @@ You can type /command in the CLI interface to use the relevant command, for exam
 
 ### Available Commands
 
-| Command              | Description                 |
-|----------------------|-----------------------------|
-| `/end`               | End the current session     |
-| `/usage`             | Display usage statistics    |
-| `/config`            | Show current configuration  |
-| `/working_config`    | Show runtime configuration  |
-| `/set <key> <value>` | Modify a configuration item |
-| `/model`             | Configure the model         |
-| `/help`              | Display help information    |
-| `/<skill_name>`      | Load a specific Skill       |
+| Command              | Description                            |
+|----------------------|----------------------------------------|
+| `/end`               | End the current session                |
+| `/usage`             | Display usage statistics               |
+| `/config`            | Show current configuration             |
+| `/working_config`    | Show runtime configuration             |
+| `/set <key> <value>` | Modify a configuration item            |
+| `/model`             | Configure the model                    |
+| `/help`              | Display help information               |
+| `/init`              | Generate AGENTS.md for current project |
+| `/<skill_name>`      | Load a specific Skill                  |

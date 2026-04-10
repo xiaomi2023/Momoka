@@ -19,6 +19,7 @@ import argparse
 import logging
 import sys
 
+from config import initialize_working_config
 from host.momoka import Momoka
 
 
@@ -67,6 +68,9 @@ Examples:
 
 def main():
     """Program entry point."""
+    # 初始化运行时配置（确保每次启动从默认工作目录开始）
+    initialize_working_config()
+
     args = parse_args()
 
     # Select user interface based on mode

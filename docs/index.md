@@ -17,5 +17,5 @@
 - [Commands](command.md)
 - [Skill](skill.md)
 - [Headless Mode (BETA)](headless.md)
-- [MCP Server Integration (BETA)](mcp_integration.md)
+- [MCP Server Integration (BETA)](mcp_server.md)
 - [Momoka Server (BETA)](momoka_server.md)

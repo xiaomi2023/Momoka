@@ -71,10 +71,17 @@ python main.py
 /set work_dir "C:\\Users\\..."
 ```
 然后输入 **/model** 以选择模型。  
-发送测试信息确保一切就绪后，就可以与 Momoka 对话或要求 Momoka 执行任务。
+如果配置过程中出现异常，可以在config.json中配置相关字段。  
+发送测试信息确保一切就绪，然后就可开始与 Momoka 对话或利用 Momoka 完成各种任务。
+
+## 🧩 自定义与拓展
+- 配置 MCP 服务器：[MCP Server](https://xiaomi2023.github.io/Momoka/mcp_integration/)
+- 配置 Skill：[Skill](https://xiaomi2023.github.io/Momoka/skill/)
+- 配置 Momoka Server：[Momoka Server](https://xiaomi2023.github.io/Momoka/momoka_server/)
+- Headless 模式：[Headless Mode](https://xiaomi2023.github.io/Momoka/headless/)
 
 ## 📄 更多信息
-[Momoka 文档](https://xiaomi2023.github.io/Momoka/)
+获取操作指南、配置、拓展等更多信息，请参考[Momoka 文档](https://xiaomi2023.github.io/Momoka/)。
 
 ## License
 This repository is licensed under the [Apache License 2.0](LICENSE).

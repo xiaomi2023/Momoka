@@ -14,7 +14,7 @@ import time
 from typing import TYPE_CHECKING
 
 from logger import log
-from server import ToolResult
+from server.types import ToolResult
 
 if TYPE_CHECKING:
     from mcp import ClientSession

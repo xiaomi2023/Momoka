@@ -11,7 +11,7 @@ Covers: ask_user, set_todolist, ask_option
 
 from __future__ import annotations
 
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 
 
 def ask_user(args: dict, ctx: ToolContext) -> ToolResult:

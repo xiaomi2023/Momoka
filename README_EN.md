@@ -73,8 +73,14 @@ After running, enter the following commands in the console to configure the Base
 Enter **/model** to select a model.
 Send a test message to ensure everything is ready, then you can chat with Momoka or ask Momoka to perform tasks.
 
+## 🧩 Customization & Extensions
+- Configure MCP Servers: [MCP Server](https://xiaomi2023.github.io/Momoka/mcp_integration/)
+- Configure Skills: [Skill](https://xiaomi2023.github.io/Momoka/skill/)
+- Configure Momoka Server: [Momoka Server](https://xiaomi2023.github.io/Momoka/momoka_server/)
+- Headless Mode: [Headless Mode](https://xiaomi2023.github.io/Momoka/headless/)
+
 ## 📄 More Information
-[Documentation](https://xiaomi2023.github.io/Momoka/)
+For operation guides, configuration, extensions and more information, please refer to [Momoka Documentation](https://xiaomi2023.github.io/Momoka/).
 
 ## License
 This repository is licensed under the [Apache License 2.0](LICENSE).

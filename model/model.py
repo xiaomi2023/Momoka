@@ -75,8 +75,9 @@ class Model:
         return self._ctx.history
 
     @property
-    def _meta(self):
-        return self._ctx._meta
+    def meta(self):
+        """元数据列表，与 history 等长，记录每条消息携带的文件内容等信息。"""
+        return self._ctx.meta
 
     def set_system(self, system: str):
         self._ctx.set_system(system)

@@ -33,12 +33,15 @@ def build_system_prompt() -> str:
     # 读取 platform_warning.md 文件
     platform_warning = _read_prompt_file('platform_warning.md')
 
-    if sys.platform == 'win32':
-        platform_hint = f'Windows({sys.platform})'
-    elif sys.platform == 'darwin':
-        platform_hint = f'macOS({sys.platform})'
-    else:
-        platform_hint = f'Linux({sys.platform})'
+    # 平台提示：使用平台原始名称，更准确
+    platform_names = {
+        'win32': 'Windows',
+        'darwin': 'macOS',
+        'linux': 'Linux',
+        'linux2': 'Linux',
+    }
+    platform_name = platform_names.get(sys.platform, sys.platform)
+    platform_hint = f'{platform_name}({sys.platform})'
 
     skills = discover_skills(cfg)
     if skills:

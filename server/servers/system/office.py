@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 
 from logger import log
-from server import ToolResult
+from server.types import ToolResult
 from config import get_working_config
 
 # ── 可选依赖检测 ─────────────────────────────────────────────────────────
@@ -305,7 +305,7 @@ def _ensure_xlsx(file_path: str, ext: str, xlsx_exts: set,
         if not converted:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             return ToolResult(
-                text='<LibreOffice conversion completed but no .docx file was generated, conversion may not be supported>',
+                text='<LibreOffice conversion completed but no .xlsx file was generated, conversion may not be supported>',
                 log_msg=log_label,
             ), None
         return os.path.join(tmp_dir, converted[0]), tmp_dir

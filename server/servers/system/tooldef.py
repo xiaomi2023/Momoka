@@ -102,7 +102,8 @@ TOOL_DEFINITIONS: list[dict] = [
                     'mode': {
                         'type': 'string',
                         'enum': ['doc'],
-                        'description': "Optional. 'doc': Read .docx file content in Markdown format.",
+                        'description': "Optional. 'doc': Read .docx file content in Markdown format."
+                                       "If you already have Skills for processing doc documents, use Skills first.",
                     },
                 },
                 'required': ['file_path'],
@@ -116,6 +117,7 @@ TOOL_DEFINITIONS: list[dict] = [
             'description': (
                 'Read the content of a Sheet file (.xlsx/.xls).\n'
                 'Reads the first Sheet if sheet_name is not specified.\n'
+                'If you already have Skills for processing sheet files, use Skills first.'
             ),
             'parameters': {
                 'type': 'object',

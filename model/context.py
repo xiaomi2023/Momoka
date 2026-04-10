@@ -16,6 +16,13 @@ class Context:
         # 与 history 等长的元数据列表，记录每条消息携带的文件内容
         self._meta: list[dict] = [{}]
 
+    # ── 公共属性 ─────────────────────────────────────────────────────
+
+    @property
+    def meta(self) -> list[dict]:
+        """元数据列表，与 history 等长，记录每条消息携带的文件内容等信息。"""
+        return self._meta
+
     # ── System Prompt ─────────────────────────────────────────────────────
 
     def set_system(self, system: str):

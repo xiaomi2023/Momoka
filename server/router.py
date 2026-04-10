@@ -18,7 +18,7 @@ import json
 
 from config import get_config
 from logger import log
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 from server.servers import dispatch_tool
 
 
@@ -50,7 +50,7 @@ def _execute_tool(name: str, args: dict, ctx: ToolContext,
         return result
     
     # 未知工具
-    return ToolResult(text=f'未知工具: {name}')
+    return ToolResult(text=f'Unknown Tool: {name}')
 
 
 # ── user_log 统一输出 ─────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ def execute_tool_calls(
 def _collapse_all_files(work_model) -> None:
     """折叠历史中所有已打开的文件和浏览器网页内容。"""
     all_file_keys = set()
-    for meta in work_model._meta:
+    for meta in work_model.meta:
         if 'file_contents' in meta:
             all_file_keys.update(meta['file_contents'].keys())
     for file_key in all_file_keys:

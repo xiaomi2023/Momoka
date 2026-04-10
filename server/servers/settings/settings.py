@@ -4,7 +4,7 @@ server/servers/settings/handler.py —— set_wait / set_read_limits 处理器�
 
 from __future__ import annotations
 
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 
 
 def set_wait(args: dict, ctx: ToolContext) -> ToolResult:

@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 from logger import log
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 
 
 def get_skills_root(cfg: dict) -> str:

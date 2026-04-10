@@ -21,6 +21,7 @@ SLASH_HELP = (
     "  /set <key> <value>  — Modify configuration in config\n"
     "  /model              — Select and switch the current model\n"
     "  /skill_name         — Load specified skill\n"
+    "  /init               — Generate AGENTS.md for current project\n"
     "  /help               — Show help[/bright_cyan]\n"
 )
 
@@ -290,6 +291,10 @@ Usage: /set <key> <value>[/bright_cyan]"""
         from rich.console import Console
         Console().print(f'[bright_cyan]config updated: {key} = {display_value}[/bright_cyan]')
         return True, None
+
+    if cmd == '/init':
+        # 返回特殊标记，让主循环处理
+        return True, '__init__'
 
     # ── /skill_name 强制调用技能 ────────────────────────────────────────
     m = re.fullmatch(r'/([\w\-]+)', cmd)

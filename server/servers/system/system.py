@@ -15,7 +15,7 @@ import traceback
 
 from config import get_config, set_where
 from logger import log
-from server import ToolResult, ToolContext
+from server.types import ToolResult, ToolContext
 from server.servers.system.office import read_docx, read_sheet_tool
 
 _IS_WINDOWS = sys.platform == 'win32'
@@ -136,7 +136,7 @@ def _system_command_impl(command: str, inputs: str | list[str] | None = None) ->
 
     cfg = get_config()
     encoding = cfg['encoding']
-    max_lines: int = cfg.get('max_lines', 200)
+    max_lines: int = cfg.get('max_lines', 100)
 
     stdout_str = b''.join(stdout_chunks).decode(encoding, errors='replace').rstrip('\r\n')
     stderr_str = b''.join(stderr_chunks).decode(encoding, errors='replace').rstrip('\r\n')
@@ -148,7 +148,7 @@ def _system_command_impl(command: str, inputs: str | list[str] | None = None) ->
         if len(lines) > max_lines:
             omitted = len(lines) - max_lines
             truncated = lines[:max_lines]
-            truncated.append(f'... （已省略 {omitted} 行，共 {len(lines)} 行）')
+            truncated.append(f'... ({len(lines)} lines in total)')
             return '\n'.join(truncated)
         return '\n'.join(lines)
 
@@ -194,7 +194,7 @@ def system_command(args: dict, ctx: ToolContext) -> ToolResult:
     input_log += '\n'
 
     output = _system_command_impl(command, inputs=inputs)
-    output_log = f'Shell Output: {"\n" + output if output.strip() else "(NULL)"}'
+    output_log = f'Shell Output: {"\n" + output if output.strip() else "(NULL)"}\n'
 
     return ToolResult(
         text=output or '(EMPTY OUTPUT)',
