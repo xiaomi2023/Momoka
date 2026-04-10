@@ -18,12 +18,22 @@
 
 **Momoka** is a locally running AI Agent assistant. Write code, organize documents, browse the web... everything with just a single line of request.
 
-## 🎉 March 2026 Update
+### 🎉 April 2026 Update
+- 🔌 Fully integrated with MCP Server ecosystem
+- 🧩 Support for custom Momoka Servers
+- 🛠️ More secure system configuration monitoring mechanism
+
+### 🎉 March 2026 Update
+<details>
+<summary>Update Details</summary>
+
 - 🔌 Fully integrated with Skill ecosystem
 - 🌐 Added web page clicking, scrolling, form filling and other operations; more stable browser fingerprint
 - 📁 Added support for Excel/Word document reading and editing
 - 💬 More user-friendly interactive interface
 - 🛠️ Architecture upgrade
+
+</details>
 
 ## ✨ Features
 
@@ -70,7 +80,8 @@ After running, enter the following commands in the console to configure the Base
 /set api_key sk-***
 /set work_dir "C:\\Users\\..."
 ```
-Enter **/model** to select a model.
+Then enter **/model** to select a model.
+If there are any exceptions during configuration, you can configure the related fields in config.json.
 Send a test message to ensure everything is ready, then you can chat with Momoka or ask Momoka to perform tasks.
 
 ## 🧩 Customization & Extensions
