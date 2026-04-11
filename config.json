@@ -20,5 +20,11 @@
     "token": "",
     "allowed_users": [],
     "proxy": ""
+  },
+
+  "qq": {
+    "app_id": "",
+    "app_secret": "",
+    "sandbox": false
   }
 }

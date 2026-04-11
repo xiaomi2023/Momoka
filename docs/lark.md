@@ -59,11 +59,11 @@ Add Lark configuration to `config.json`:
 
 ### Configuration Parameters
 
-| Parameter           | Type       | Description                                        |
-|---------------------|------------|----------------------------------------------------|
-| `interface`         | `string`   | Set to `"lark"` to run with Lark by default        |
-| `lark.app_id`       | `string`   | Your Lark application App ID                       |
-| `lark.app_secret`   | `string`   | Your Lark application App Secret                   |
+| Parameter           | Type       | Description                                           |
+|---------------------|------------|-------------------------------------------------------|
+| `interface`         | `string`   | Set to `"lark"` to make Momoka run in Lark by default |
+| `lark.app_id`       | `string`   | Your Lark application App ID                          |
+| `lark.app_secret`   | `string`   | Your Lark application App Secret                      |
 
 ## Running the Bot
 

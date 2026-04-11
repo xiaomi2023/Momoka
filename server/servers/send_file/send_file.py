@@ -14,7 +14,7 @@ from server.types import ToolResult, ToolContext
 
 
 def send_file(args: dict, ctx: ToolContext) -> ToolResult:
-    """send_file 工具处理器：将文件发送给用户（支持 Discord/Lark）。"""
+    """send_file 工具处理器：将文件发送给用户（支持 Discord/Lark/QQ）。"""
     file_path = args.get('file_path', '')
     caption = args.get('caption', '').strip()
 
@@ -51,7 +51,7 @@ def send_file(args: dict, ctx: ToolContext) -> ToolResult:
         if not hasattr(ctx.user, 'send_file'):
             return ToolResult(
                 text='<Current user interface does not support sending files. '
-                     'This feature is only available in Lark or Discord mode.>',
+                     'This feature is only available in Lark, Discord, or QQ mode.>',
                 log_msg=log_label,
             )
 

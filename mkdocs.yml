@@ -105,6 +105,7 @@ nav:
   - MCP Server: mcp_server.md
   - Discord: discord.md
   - Lark/Feishu: lark.md
+  - QQ: qq.md
 
 # 额外配置
 extra:

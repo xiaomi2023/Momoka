@@ -372,9 +372,9 @@ def _handle_model_command() -> None:
         raw['model'] = chosen
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(raw, f, ensure_ascii=False, indent=2)
-        console.print(f'[bright_cyan]Model updated: {current!r} → {chosen!r}[/bright_cyan]\n')
+        console.print(f'[bright_cyan]Model updated: {current!r} → {chosen!r}[/bright_cyan]')
     except Exception as e:
-        console.print(f'[bright_red]Failed to save model: {e}[/bright_red]\n')
+        console.print(f'[bright_red]Failed to save model: {e}[/bright_red]')
 
 
 def _handle_model_fallback() -> None:

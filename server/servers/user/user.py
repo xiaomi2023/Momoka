@@ -8,6 +8,7 @@ Covers: ask_user, set_todolist, ask_option
 - CLI 使用 CliInteractionAdapter、CliSelectorAdapter
 - Lark 使用 LarkAskUserAdapter、LarkTodoListAdapter、LarkSelectorAdapter
 - Discord 使用 DiscordAskUserAdapter、DiscordTodoListAdapter、DiscordSelectorAdapter
+- QQ 使用 QQAskUserAdapter、QQTodolistAdapter、QQSelectorAdapter
 - Headless 使用 HeadlessAskUserAdapter、HeadlessTodoListAdapter、HeadlessSelectorAdapter
 """
 
@@ -42,6 +43,17 @@ def ask_user(args: dict, ctx: ToolContext) -> ToolResult:
 
         ask_user_instance = AskUser(question)
         adapter = DiscordAskUserAdapter(user)
+        callbacks = adapter.make_callbacks()
+        reply = ask_user_instance.run(callbacks)
+        text = f'Reply: {reply}' if reply else '(NULL)'
+
+    elif interface_type == 'qq':
+        # QQ 模式
+        from user.qq_bot.interactions import QQAskUserAdapter
+        from user.interactions import AskUser
+
+        ask_user_instance = AskUser(question)
+        adapter = QQAskUserAdapter(user)
         callbacks = adapter.make_callbacks()
         reply = ask_user_instance.run(callbacks)
         text = f'Reply: {reply}' if reply else '(NULL)'
@@ -103,6 +115,16 @@ def set_todolist(args: dict, ctx: ToolContext) -> ToolResult:
 
         todolist_instance = TodoList(tasks)
         adapter = DiscordTodoListAdapter(user)
+        callbacks = adapter.make_callbacks()
+        display_text = todolist_instance.run(callbacks)
+
+    elif interface_type == 'qq':
+        # QQ 模式
+        from user.qq_bot.interactions import QQTodolistAdapter
+        from user.interactions import TodoList
+
+        todolist_instance = TodoList(tasks)
+        adapter = QQTodolistAdapter(user)
         callbacks = adapter.make_callbacks()
         display_text = todolist_instance.run(callbacks)
 
@@ -178,6 +200,14 @@ def ask_option(args: dict, ctx: ToolContext) -> ToolResult:
         adapter = DiscordSelectorAdapter(user)
         result_text = adapter.run_selector(selector)
 
+    elif interface_type == 'qq':
+        # QQ 模式
+        from user.qq_bot.interactions import QQSelectorAdapter
+
+        selector = OptionSelector(normalized_options, question, allow_multiple)
+        adapter = QQSelectorAdapter(user)
+        result_text = adapter.run_selector(selector)
+
     elif interface_type == 'headless':
         # 无头模式
         from user.headless.interactions import HeadlessSelectorAdapter
@@ -200,7 +230,7 @@ def ask_option(args: dict, ctx: ToolContext) -> ToolResult:
 
     return ToolResult(
         text=result_text,
-        log_msg=f'{question}->{result_text}',
+        log_msg=f'{question} -> {result_text}',
         log_role='QUESTION',
     )
 

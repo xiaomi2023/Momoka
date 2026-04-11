@@ -7,6 +7,7 @@ Supports multiple interface modes:
 4. Lark/Feishu Bot: Lark messaging interface
 5. Discord Bot: Discord messaging interface
 6. Slack Bot: Slack messaging interface
+7. QQ Bot: QQ messaging interface
 
 Usage:
     # CLI mode
@@ -29,6 +30,9 @@ Usage:
 
     # Slack Bot
     python main.py --interface slack
+
+    # QQ Bot
+    python main.py --interface qq
 """
 
 import argparse
@@ -59,6 +63,7 @@ Examples:
   python main.py --interface lark          # Lark/Feishu Bot
   python main.py --interface discord       # Discord Bot
   python main.py --interface slack         # Slack Bot
+  python main.py --interface qq            # QQ Bot
   python main.py --headless stdio          # Headless mode with stdio
   python main.py --headless file \\
            --input input.txt \\
@@ -68,7 +73,7 @@ Examples:
 
     parser.add_argument(
         '--interface',
-        choices=['cli', 'telegram', 'lark', 'discord', 'slack'],
+        choices=['cli', 'telegram', 'lark', 'discord', 'slack', 'qq'],
         default=None,
         help='Interface type to use (overrides config.json)'
     )
@@ -156,6 +161,23 @@ def main():
                 proxy=discord_cfg.get('proxy', None)
             )
             log('interface | discord bot')
+
+        elif interface == 'qq':
+            from user.qq_bot import QQBotUser
+            cfg = get_config()
+            qq_cfg = cfg.get('qq', {})
+            app_id = qq_cfg.get('app_id', '')
+            app_secret = qq_cfg.get('app_secret', '')
+            sandbox = qq_cfg.get('sandbox', False)
+            if not app_id or not app_secret:
+                print("Error: Please configure qq.app_id and qq.app_secret")
+                sys.exit(1)
+            ui = QQBotUser(
+                app_id=app_id,
+                app_secret=app_secret,
+                sandbox=sandbox
+            )
+            log('interface | qq bot (WebSocket mode)')
 
         else:
             # Default CLI mode

@@ -59,12 +59,12 @@ Add Discord configuration to `config.json`:
 
 ### Configuration Parameters
 
-| Parameter                 | Type             | Description                                                                                |
-|---------------------------|------------------|--------------------------------------------------------------------------------------------|
-| `interface`               | `string`         | Set to `"discord"` to run with Discord by default                                          |
-| `discord.token`           | `string`         | Required. Discord Bot Token obtained from the Developer Portal                             |
-| `discord.allowed_users`   | `list[int]`      | List of allowed user IDs. An empty list `[]` means all users can use the bot               |
-| `discord.proxy`           | `string \| null` | Optional. Proxy address (e.g., `"http://127.0.0.1:7890"`).                                |
+| Parameter               | Type             | Description                                                                  |
+|-------------------------|------------------|------------------------------------------------------------------------------|
+| `interface`             | `string`         | Set to `"discord"` to make Momoka run in Discord by default                  |
+| `discord.token`         | `string`         | Required. Discord Bot Token obtained from the Developer Portal               |
+| `discord.allowed_users` | `list[int]`      | List of allowed user IDs. An empty list `[]` means all users can use the bot |
+| `discord.proxy`         | `string \| null` | Optional. Proxy address (e.g., `"http://127.0.0.1:7890"`).                   |
 
 ### Obtain Your User ID
 

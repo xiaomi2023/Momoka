@@ -250,13 +250,13 @@ class DiscordBotUser(BaseUser):
                     file_content = self._read_file_content(file_path, file_name)
                     if file_content:
                         # 将文件内容作为消息放入队列
-                        message_text = f"[User uploaded file: {file_name}]\n\n{file_content}"
+                        message_text = f"<{file_name}>\n{file_content}\n</{file_name}>"
                         queue = self._get_queue(channel_id)
                         await queue.put(message_text)
                         log(f'discord | file content queued: {file_name}')
                     else:
                         queue = self._get_queue(channel_id)
-                        await queue.put(f"[User uploaded file: {file_name}]\n[File downloaded to: {file_path} but could not be read as text]")
+                        await queue.put(f"<{file_name}>\n[File downloaded to: {file_path} but could not be read as text]\n</{file_name}>")
                 else:
                     log(f'discord | failed to download attachment: {file_name}')
                     await message.channel.send(f"Failed to receive file: {file_name}")
@@ -343,7 +343,7 @@ class DiscordBotUser(BaseUser):
 
         # Office 文档扩展名（需要特殊处理）
         office_extensions = {
-            '.docx', '.xlsx', '.pptx',
+            '.docx', '.xlsx',
         }
 
         if ext in office_extensions:
@@ -406,9 +406,6 @@ class DiscordBotUser(BaseUser):
                         if row_text.strip():
                             lines.append(row_text)
                 return '\n'.join(lines)
-            elif ext == '.pptx':
-                # python-pptx 需要单独安装，这里简单返回提示
-                return "[PPTX file - content extraction not supported]"
         except Exception as e:
             log(f'discord | read office file error: {e}')
             return f"[Failed to read {ext} file: {e}]"
