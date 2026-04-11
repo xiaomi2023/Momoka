@@ -1,18 +1,5 @@
 # MCP Server (BETA)
 
-### Table of Contents
-
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Configuration](#configuration)
-  - [Configuration File Location](#configuration-file-location)
-  - [Basic Structure](#basic-structure)
-  - [Transport Protocols](#transport-protocols)
-- [Configuration Parameters](#configuration-parameters)
-- [Examples](#examples)
-  - [stdio Transport (Local Process)](#stdio-transport-local-process)
-  - [sse/http Transport (Remote Server)](#ssehttp-transport-remote-server)
-
 ## Overview
 
 MCP (Model Context Protocol) is an open standard for connecting AI agents to external data sources and tools. Momoka supports MCP servers, enabling seamless integration with third-party services such as GitHub, Slack, databases, and more.

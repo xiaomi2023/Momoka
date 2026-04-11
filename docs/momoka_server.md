@@ -1,23 +1,5 @@
 # Momoka Server (Beta)
 
-### Table of Contents
-
-- [Overview](#overview)
-- [Momoka Server Module Structure](#momoka-server-module-structure)
-- [Core Components](#core-components)
-  - [ToolResult](#toolresult)
-  - [ToolContext](#toolcontext)
-  - [ServerRegistration](#serverregistration)
-  - [Momoka Server Registration API](#momoka-server-registration-api)
-- [Advanced Features](#advanced-features)
-  - [Conditional Tool Availability](#conditional-tool-availability)
-  - [Context Folding](#context-folding)
-- [Example](#example)
-  - [Directory Structure](#directory-structure)
-  - [1. tooldef.py - Define Tools](#1-tooldefpy---define-tools)
-  - [2. calculator.py - Implement Tool Handlers](#2-calculatorpy---implement-tool-handlers)
-  - [3. __init__.py - Register Module](#3-__init__py---register-module)
-
 ## Overview
 
 Momoka Server is the way Momoka interacts with external data sources and tools. By creating custom Momoka Servers and leveraging features like tool services and context management, you can enable Momoka to connect and interact with external services.

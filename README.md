@@ -91,6 +91,10 @@ python main.py
 - 配置 Momoka Server：[Momoka Server](https://xiaomi2023.github.io/Momoka/momoka_server/)
 - Headless 模式：[Headless Mode](https://xiaomi2023.github.io/Momoka/headless/)
 
+## 🤖 更多平台
+- [Discord](https://xiaomi2023.github.io/Momoka/discord/)
+- [Lark/飞书](https://xiaomi2023.github.io/Momoka/lark/)
+
 ## 📄 更多信息
 获取操作指南、配置、拓展等更多信息，请参考[Momoka 文档](https://xiaomi2023.github.io/Momoka/)。
 

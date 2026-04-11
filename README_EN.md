@@ -16,7 +16,7 @@
 
 ---
 
-**Momoka** is a locally running AI Agent assistant. Write code, organize documents, browse the web... everything with just a single line of request.
+**Momoka** is a locally running AI Agent assistant. Communicate with Momoka or send tasks via CLI, Discord, or Lark. Write code, organize documents, browse the web... everything with just a single line of request.
 
 ### 🎉 April 2026 Update
 - 🔌 Fully integrated with MCP Server ecosystem
@@ -89,6 +89,10 @@ Send a test message to ensure everything is ready, then you can chat with Momoka
 - Configure Skills: [Skill](https://xiaomi2023.github.io/Momoka/skill/)
 - Configure Momoka Server: [Momoka Server](https://xiaomi2023.github.io/Momoka/momoka_server/)
 - Headless Mode: [Headless Mode](https://xiaomi2023.github.io/Momoka/headless/)
+
+## 🤖 More Platforms
+- [Discord](https://xiaomi2023.github.io/Momoka/discord/)
+- [Lark](https://xiaomi2023.github.io/Momoka/lark/)
 
 ## 📄 More Information
 For operation guides, configuration, extensions and more information, please refer to [Momoka Documentation](https://xiaomi2023.github.io/Momoka/).
