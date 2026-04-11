@@ -68,9 +68,14 @@ BROWSER_PAGE_TOOLS: list[dict] = [
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'max_chars': {
+                    'char_start': {
                         'type': 'integer',
-                        'description': 'Maximum number of characters to return for the body text. Defaults to 4000',
+                        'description': 'Start character position (0-based). Defaults to 0',
+                        'default': 0,
+                    },
+                    'char_end': {
+                        'type': 'integer',
+                        'description': 'End character position (exclusive). Defaults to 4000',
                         'default': 4000,
                     },
                     'mode': {
@@ -329,7 +334,8 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_scroll',
-            'description': 'Scroll the page or the specified element. Supports directions: up / down / left / right.',
+            'description': 'Scroll the page or the specified element. Supports directions: up / down / left / right. \n'
+            "Unless necessary, prioritize adjusting char_start and char_end of browser_read to read more content.",
             'parameters': {
                 'type': 'object',
                 'properties': {

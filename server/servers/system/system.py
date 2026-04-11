@@ -220,6 +220,10 @@ def edit_file_tool(args: dict, ctx: ToolContext) -> ToolResult:
     content = args.get('content', '')
     encoding = args.get('encoding') or ctx.cfg.get('encoding', 'utf-8')
     try:
+        # 将相对路径转换为基于当前工作目录的绝对路径
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(_get_cwd(), file_path)
+        
         edit_file(file_path, content, encoding)
         write_lines = len(content.splitlines())
         return ToolResult(
@@ -241,6 +245,10 @@ def replace_file(args: dict, ctx: ToolContext) -> ToolResult:
     new_text = args.get('new_text', '')
     encoding = args.get('encoding') or ctx.cfg.get('encoding', 'utf-8')
     try:
+        # 将相对路径转换为基于当前工作目录的绝对路径
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(_get_cwd(), file_path)
+        
         content = find_file(file_path, encoding)
         if old_text not in content:
             return ToolResult(text=f'<Replacement failed: The specified old text was not found in {file_path}>')
@@ -272,6 +280,10 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
     log_label = f'Read File: {file_path}' + (' [doc]' if mode == 'doc' else '')
 
     try:
+        # 将相对路径转换为基于当前工作目录的绝对路径
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(_get_cwd(), file_path)
+        
         max_size_bytes = max_size_kb * 1024
         file_size = os.path.getsize(file_path)
         if file_size > max_size_bytes:

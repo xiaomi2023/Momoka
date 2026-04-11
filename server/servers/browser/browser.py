@@ -94,20 +94,23 @@ def browser_open(url: str, wait_until: str = "domcontentloaded") -> str:
         return f"<Failed to open Page: {e}>"
 
 
-def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
+def browser_read(char_start: int = 0, char_end: int = 4000, mode: str = "all") -> str:
     """读取当前页面内容。
 
-    mode:
-        "interactive" — 只列出可交互元素（UUID、类型、标签文字）
-        "text"        — 只显示页面正文
-        "all"         — 正文 + 可交互元素（默认）
+    Args:
+        char_start: 起始字符位置，默认 0。
+        char_end: 结束字符位置，默认 4000。
+        mode:
+            "interactive" — 只列出可交互元素（UUID、类型、标签文字）
+            "text"        — 只显示页面正文
+            "all"         — 正文 + 可交互元素（默认）
     """
+    # 检测新标签页（必须在 get_page() 之前调用）
+    _maybe_switch_to_new_tab()
+    
     page = get_page()
     if page is None or page.is_closed():
         return "<The browser has not been opened yet>"
-
-    # 检测新标签页
-    _maybe_switch_to_new_tab()
 
     if mode not in ("interactive", "text", "all"):
         mode = "all"
@@ -127,10 +130,14 @@ def browser_read(max_chars: int = 4000, mode: str = "all") -> str:
     # 正文部分
     if mode in ("text", "all"):
         body = "\n".join(line for line in text_lines if line.strip())
-        if len(body) > max_chars:
-            body = (body[:max_chars] +
-                    f"\n...(Truncated, totaling {len(body)} characters)\n"
-                    f"<The max_chars parameter can be increased to read more>")
+        total_len = len(body)
+        # 按范围截取字符
+        body = body[char_start:char_end]
+        if total_len > char_end:
+            body += (
+                f"\n...(Truncated from char {char_start} to {char_end}, totaling {total_len} characters)\n"
+                f"<You can adjust char_start and char_end parameters to read more>"
+            )
         if body:
             sections.append("<Text>\n" + body + "\n</Text>")
 
@@ -698,10 +705,11 @@ def _search(args: dict, ctx: ToolContext) -> ToolResult:
 
 
 def _read(args: dict, ctx: ToolContext, work_model=None) -> ToolResult:
-    max_chars = int(args.get('max_chars', 4000))
+    char_start = int(args.get('char_start', 0))
+    char_end = int(args.get('char_end', 4000))
     mode = args.get('mode', 'all')
 
-    result = browser_read(max_chars, mode)
+    result = browser_read(char_start, char_end, mode)
 
     # 构造文件键
     try:

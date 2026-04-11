@@ -210,17 +210,7 @@
 
         // ── 链接 ──────────────────────────────────────────────
         if (tag === 'a') {
-            const href = el.getAttribute('href') || '';
-            if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-                try {
-                    const url = new URL(href, window.location.href);
-                    lines.push('[' + t + '](' + url.href + ')');
-                } catch {
-                    lines.push('[' + t + '](' + href + ')');
-                }
-            } else {
-                lines.push('**' + t + '** [link]');
-            }
+            lines.push(t);
             continue;
         }
 

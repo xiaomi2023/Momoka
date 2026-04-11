@@ -68,6 +68,11 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
             ],
         )
 
+    # 将相对路径转换为基于当前工作目录的绝对路径
+    from server.servers.system.system import _get_cwd
+    if not os.path.isabs(file_path):
+        file_path = os.path.join(_get_cwd(), file_path)
+    
     tmp_dir = None
     docx_path = file_path
     ext = os.path.splitext(file_path)[1].lower()
@@ -162,6 +167,11 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
 def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
                     range_str: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
     """Read Excel or CSV file."""
+    # 将相对路径转换为基于当前工作目录的绝对路径
+    from server.servers.system.system import _get_cwd
+    if not os.path.isabs(file_path):
+        file_path = os.path.join(_get_cwd(), file_path)
+    
     ext = os.path.splitext(file_path)[1].lower()
 
     # ── CSV ──────────────────────────────────────────────────────────
@@ -257,6 +267,11 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
 
 def _read_csv_file(file_path: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
     """Read CSV file."""
+    # 将相对路径转换为基于当前工作目录的绝对路径
+    from server.servers.system.system import _get_cwd
+    if not os.path.isabs(file_path):
+        file_path = os.path.join(_get_cwd(), file_path)
+    
     with open(file_path, 'r', encoding=encoding, newline='') as fh:
         reader = csv.reader(fh)
         csv_lines = []
