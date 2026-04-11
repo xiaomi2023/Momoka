@@ -103,6 +103,8 @@ nav:
   - Headless Mode: headless.md
   - Momoka Server: momoka_server.md
   - MCP Server: mcp_server.md
+  - Discord: discord.md
+  - Lark/Feishu: lark.md
 
 # 额外配置
 extra:

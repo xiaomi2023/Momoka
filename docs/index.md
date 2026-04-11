@@ -19,3 +19,5 @@
 - [Headless Mode (BETA)](headless.md)
 - [MCP Server Integration (BETA)](mcp_server.md)
 - [Momoka Server (BETA)](momoka_server.md)
+- [Lark (BETA)](lark.md)
+- [Discord (BETA)](discord.md)

@@ -7,5 +7,18 @@
   "fold": true,
   "mute_log": [],
   "language": null,
-  "prompt": null
+  "prompt": null,
+
+  "interface": "cli",
+
+  "lark": {
+    "app_id": "",
+    "app_secret": ""
+  },
+
+  "discord": {
+    "token": "",
+    "allowed_users": [],
+    "proxy": ""
+  }
 }
