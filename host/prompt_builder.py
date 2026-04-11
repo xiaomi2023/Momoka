@@ -63,5 +63,5 @@ def build_system_prompt() -> str:
         f"OS: {platform_hint}"
         f"{platform_warning}"
         f"{skills_hint}"
-        f"{("\n<user_prompt>\n" + cfg['prompt']) if cfg.get('prompt') else ''}" + "\n</user_prompt>"
+        f"\n<user_prompt>\n" + (cfg['prompt'] if cfg.get('prompt') else "NULL") + "\n</user_prompt>"
     )

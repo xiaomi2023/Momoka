@@ -88,6 +88,10 @@ class Model:
     def clear_skills(self):
         self._ctx.clear_skills()
 
+    def clear_history(self):
+        """清空对话历史，仅保留 system 消息。"""
+        self._ctx.clear_history()
+
     def repair_history(self) -> int:
         return self._ctx.repair_history()
 

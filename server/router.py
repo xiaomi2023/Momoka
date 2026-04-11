@@ -88,7 +88,7 @@ def execute_tool_calls(
         - all_file_contents: 所有文件内容字典
     """
     cfg = get_config()
-    ctx = ToolContext(cfg=cfg, input_func=input_func)
+    ctx = ToolContext(cfg=cfg, input_func=input_func, user=user)
 
     all_file_contents: dict[str, str] = {}
     is_finish = False

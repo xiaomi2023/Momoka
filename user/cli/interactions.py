@@ -41,7 +41,7 @@ class CliInteractionAdapter:
     def _get_input(self, prompt: str) -> str:
         """从终端获取用户输入。"""
         try:
-            return input(prompt)
+            return input('-> ')
         except (EOFError, KeyboardInterrupt):
             return ''
 

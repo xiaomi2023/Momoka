@@ -26,19 +26,19 @@ Momoka can run as a Discord Bot, allowing you to communicate with Momoka through
 
 1. Scroll down to **"Privileged Gateway Intents"**
 2. Enable the following options:
-   - ✅ **Message Content Intent** (required for reading messages)
-   - ✅ **Server Members Intent** (optional, for member-related features)
+   - **Message Content Intent** (required for reading messages)
+   - **Server Members Intent** (optional, for member-related features)
 
 ### Step 5: Invite the Bot to a Server
 
 1. Go to **"OAuth2"** → **"URL Generator"**
 2. Select scopes:
-   - ✅ `bot`
-   - ✅ `applications.commands`
+   - `bot`
+   - `applications.commands`
 3. Select bot permissions:
-   - ✅ **Send Messages**
-   - ✅ **Read Message History**
-   - ✅ **Send Messages in Threads** (if using threads)
+   - **Send Messages**
+   - **Read Message History**
+   - **Send Messages in Threads** (if using threads)
 4. Copy the generated URL and open it in your browser
 5. Select a server and authorize the bot
 
@@ -94,6 +94,7 @@ python main.py --interface discord
 
 ### Starting a Conversation
 
+Send a message to a channel or private chat that includes Momoka to start a conversation.
 If you see the following message, the connection is successful:
 
 ```

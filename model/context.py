@@ -12,6 +12,7 @@ class Context:
     def __init__(self, base_system: str = 'You are a helpful assistant'):
         self._base_system: str = base_system
         self._injected_skills: dict[str, str] = {}
+        self._preset_conv_count: int = 0  # 记录预设对话的数量
         self.history: list[dict] = [{'role': 'system', 'content': base_system}]
         # 与 history 等长的元数据列表，记录每条消息携带的文件内容
         self._meta: list[dict] = [{}]
@@ -86,6 +87,8 @@ class Context:
             else:
                 log(f'context.insert_preset_conversations | 跳过不支持的角色: {role}')
 
+        # 记录预设对话的数量
+        self._preset_conv_count = len(conversations)
         log(f'context.insert_preset_conversations | 插入 {len(conversations)} 条预设对话')
 
     def append_user(self, message: str, file_contents: dict[str, str] | None = None):
@@ -163,6 +166,21 @@ class Context:
             else:
                 i += 1
         return repaired
+
+    def clear_history(self):
+        """清空对话历史，保留 system 消息和预设对话。
+
+        注意：
+        - 清除所有用户对话和工具调用记录
+        - 清除已注入的 skill（可通过 get_skill 重新加载）
+        - 保留 system 消息和 preset_convs.json 中的预设对话
+        """
+        # 保存 system 消息和预设对话
+        keep_count = 1 + self._preset_conv_count  # system + 预设对话
+        self.history = self.history[:keep_count]
+        self._meta = self._meta[:keep_count]
+        self._injected_skills.clear()
+        log(f'context.clear_history | 已清空对话历史（保留 system 和 {self._preset_conv_count} 条预设对话）')
 
     def collapse_file_in_history(self, filename: str) -> int:
         """将历史中除最后一次之外、所有包含指定文件内容的消息折叠。

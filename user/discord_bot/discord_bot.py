@@ -32,6 +32,8 @@ class DiscordBotUser(BaseUser):
     - 命令交互 (/start, /end, /usage 等)
     - 消息格式化(角色标签、长消息分割)
     """
+    
+    interface_type = 'discord'
 
     def __init__(self, token: str, allowed_users: list[int] | None = None, proxy: str | None = None):
         """
@@ -216,11 +218,202 @@ class DiscordBotUser(BaseUser):
         content = message.content.strip()
         log(f'discord | received message from {message.author}: {content}')
 
+        # 处理附件（文件）
+        if message.attachments:
+            await self._handle_attachments(message)
+            return
+
         # 普通消息 - 放入队列
         if content:
             queue = self._get_queue(message.channel.id)
             await queue.put(content)
             log(f'discord | message queued to channel {message.channel.id}')
+
+    async def _handle_attachments(self, message: discord.Message):
+        """处理消息附件（文件）。
+
+        Args:
+            message: Discord 消息对象
+        """
+        try:
+            channel_id = message.channel.id
+            log(f'discord | handling {len(message.attachments)} attachment(s) from channel {channel_id}')
+
+            for attachment in message.attachments:
+                file_name = attachment.filename
+                log(f'discord | processing attachment: {file_name}')
+
+                # 下载文件
+                file_path = await self._download_discord_attachment(attachment)
+                if file_path:
+                    # 读取文件内容
+                    file_content = self._read_file_content(file_path, file_name)
+                    if file_content:
+                        # 将文件内容作为消息放入队列
+                        message_text = f"[User uploaded file: {file_name}]\n\n{file_content}"
+                        queue = self._get_queue(channel_id)
+                        await queue.put(message_text)
+                        log(f'discord | file content queued: {file_name}')
+                    else:
+                        queue = self._get_queue(channel_id)
+                        await queue.put(f"[User uploaded file: {file_name}]\n[File downloaded to: {file_path} but could not be read as text]")
+                else:
+                    log(f'discord | failed to download attachment: {file_name}')
+                    await message.channel.send(f"Failed to receive file: {file_name}")
+        except Exception as e:
+            log(f'discord | handle attachments error: {e}')
+            import traceback
+            log(f'discord | traceback: {traceback.format_exc()}')
+
+    async def _download_discord_attachment(self, attachment: discord.Attachment) -> str | None:
+        """下载 Discord 附件。
+
+        Args:
+            attachment: Discord 附件对象
+
+        Returns:
+            下载后的本地文件路径，失败返回 None
+        """
+        try:
+            import os
+            import tempfile
+            import aiohttp
+
+            # 使用工作目录下的 temp 文件夹
+            work_dir = get_config().get('work_dir', tempfile.gettempdir())
+            temp_dir = os.path.join(work_dir, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+
+            # 生成唯一文件名避免冲突
+            import uuid
+            file_name = attachment.filename
+            unique_name = f"{uuid.uuid4().hex[:8]}_{file_name}"
+            file_path = os.path.join(temp_dir, unique_name)
+
+            # 下载文件
+            proxy = self._proxy if self._proxy else None
+            async with aiohttp.ClientSession() as session:
+                async with session.get(attachment.url, proxy=proxy) as resp:
+                    if resp.status != 200:
+                        log(f'discord | download attachment failed: {resp.status}')
+                        return None
+                    with open(file_path, 'wb') as f:
+                        f.write(await resp.read())
+
+            log(f'discord | attachment downloaded to: {file_path}')
+            return file_path
+
+        except Exception as e:
+            log(f'discord | download attachment error: {e}')
+            import traceback
+            log(f'discord | traceback: {traceback.format_exc()}')
+            return None
+
+    def _read_file_content(self, file_path: str, file_name: str) -> str | None:
+        """读取文件内容为文本。
+
+        Args:
+            file_path: 文件路径
+            file_name: 文件名
+
+        Returns:
+            文件文本内容，如果不是文本文件返回 None
+        """
+        import os
+
+        # 检查文件大小（限制 10MB）
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_size = os.path.getsize(file_path)
+        if file_size > max_size:
+            return f"[File too large: {file_size / 1024 / 1024:.2f}MB, max 10MB]"
+
+        # 根据扩展名判断文件类型
+        ext = os.path.splitext(file_name)[1].lower()
+
+        # 文本文件扩展名
+        text_extensions = {
+            '.txt', '.md', '.py', '.js', '.ts', '.html', '.css', '.json',
+            '.xml', '.yaml', '.yml', '.csv', '.log', '.ini', '.conf',
+            '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
+            '.c', '.cpp', '.h', '.hpp', '.java', '.go', '.rs', '.swift',
+            '.kt', '.scala', '.rb', '.php', '.pl', '.lua', '.r', '.m',
+            '.sql', '.dockerfile', '.makefile', '.cmake', '.gradle',
+            '.vue', '.jsx', '.tsx', '.svelte', '.less', '.scss', '.sass',
+        }
+
+        # Office 文档扩展名（需要特殊处理）
+        office_extensions = {
+            '.docx', '.xlsx', '.pptx',
+        }
+
+        if ext in office_extensions:
+            return self._read_office_file(file_path, ext)
+
+        # 尝试作为文本文件读取
+        if ext in text_extensions or ext not in {'.pdf', '.doc', '.xls', '.ppt', '.zip', '.rar', '.7z', '.tar', '.gz', '.exe', '.dll', '.so', '.dylib'}:
+            return self._try_read_text_file(file_path)
+
+        return None
+
+    def _try_read_text_file(self, file_path: str) -> str | None:
+        """尝试以文本方式读取文件。
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            文件内容，如果读取失败返回 None
+        """
+        encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1', 'cp1252']
+
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                return content
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                log(f'discord | read file error with {encoding}: {e}')
+                continue
+
+        return None
+
+    def _read_office_file(self, file_path: str, ext: str) -> str | None:
+        """读取 Office 文档内容。
+
+        Args:
+            file_path: 文件路径
+            ext: 文件扩展名
+
+        Returns:
+            文档文本内容
+        """
+        try:
+            if ext == '.docx':
+                from docx import Document
+                doc = Document(file_path)
+                paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+                return '\n'.join(paragraphs)
+            elif ext == '.xlsx':
+                from openpyxl import load_workbook
+                wb = load_workbook(file_path, data_only=True)
+                lines = []
+                for sheet in wb.worksheets:
+                    lines.append(f'--- Sheet: {sheet.title} ---')
+                    for row in sheet.iter_rows(values_only=True):
+                        row_text = ' | '.join(str(cell) if cell is not None else '' for cell in row)
+                        if row_text.strip():
+                            lines.append(row_text)
+                return '\n'.join(lines)
+            elif ext == '.pptx':
+                # python-pptx 需要单独安装，这里简单返回提示
+                return "[PPTX file - content extraction not supported]"
+        except Exception as e:
+            log(f'discord | read office file error: {e}')
+            return f"[Failed to read {ext} file: {e}]"
+
+        return None
 
     def run(self) -> None:
         """启动 Discord Bot 会话循环。"""
@@ -296,6 +489,9 @@ class DiscordBotUser(BaseUser):
         waiting_for_model_choice = False
         pending_models: list[str] = []
 
+        # 清空确认状态
+        waiting_for_clear_confirmation = False
+
         # 等待 Bot 启动
         while self._bot is None or not self._bot.is_ready():
             time.sleep(0.1)
@@ -339,6 +535,12 @@ class DiscordBotUser(BaseUser):
                     continue
                 # 如果选择无效,继续作为普通消息处理
 
+            # 如果正在等待清空确认,处理用户的回复
+            if waiting_for_clear_confirmation:
+                waiting_for_clear_confirmation = False
+                if self._handle_clear_confirmation(user_message):
+                    continue
+
             # 检查是否为斜杠命令
             if user_message.strip().startswith('/'):
                 # 如果是 /model 命令,需要特殊处理
@@ -372,6 +574,10 @@ class DiscordBotUser(BaseUser):
                         break
                     # /init 命令
                     if skill_name == '__init__':
+                        continue
+                    # /clear 命令（等待用户确认）
+                    if skill_name == '__clear_ask__':
+                        waiting_for_clear_confirmation = True
                         continue
                     # Skill 加载
                     if skill_name is not None:
@@ -441,6 +647,84 @@ class DiscordBotUser(BaseUser):
     def send_error(self, message: str) -> None:
         """输出错误消息。"""
         log(f'discord ERROR | {message}')
+
+    def send_file(self, file_path: str, caption: str = '') -> None:
+        """向用户发送一个文件（Discord 支持文件附件）。
+
+        Args:
+            file_path: 文件的绝对路径
+            caption: 可选的伴随消息
+        """
+        import os
+
+        log(f'discord | send_file: {file_path} | caption: {caption}')
+
+        # 验证文件是否存在
+        if not os.path.exists(file_path):
+            log(f'discord | send_file error: file not found: {file_path}')
+            self.send_error(f'File not found: {file_path}')
+            return
+
+        # 如果有活跃的频道 ID,发送文件到 Discord
+        if self._active_channel_id:
+            self._send_discord_file_by_api(self._active_channel_id, file_path, caption)
+
+    def _send_discord_file_by_api(self, channel_id: int, file_path: str, caption: str = '') -> None:
+        """通过 Discord REST API 发送文件附件。
+
+        Args:
+            channel_id: 频道 ID
+            file_path: 文件路径
+            caption: 可选的伴随消息
+        """
+        import aiohttp
+        import asyncio as aio
+        import os
+
+        try:
+            file_name = os.path.basename(file_path)
+            log(f'discord | _send_discord_file_by_api starting, channel_id={channel_id}, file={file_name}')
+
+            # Discord 附件上传使用 multipart/form-data
+            proxy = self._proxy if self._proxy else None
+
+            async def send_file_async():
+                async with aiohttp.ClientSession() as session:
+                    # 构建 multipart 数据
+                    data = aiohttp.FormData()
+                    if caption:
+                        data.add_field('content', caption)
+                    
+                    with open(file_path, 'rb') as f:
+                        data.add_field(
+                            'files[0]',
+                            f,
+                            filename=file_name,
+                            content_type='application/octet-stream'
+                        )
+
+                        async with session.post(
+                            f'https://discord.com/api/v10/channels/{channel_id}/messages',
+                            headers={'Authorization': f'Bot {self._token}'},
+                            data=data,
+                            proxy=proxy
+                        ) as resp:
+                            log(f'discord | file upload response: {resp.status}')
+                            if resp.status not in (200, 201):
+                                error_text = await resp.text()
+                                log(f'discord | file upload error: {error_text}')
+
+            # 同步调用异步函数
+            loop = aio.new_event_loop()
+            loop.run_until_complete(send_file_async())
+            loop.close()
+            log(f'discord | file sent: {file_name}')
+
+        except Exception as e:
+            log(f'discord | send file error: {e}')
+            import traceback
+            log(f'discord | traceback: {traceback.format_exc()}')
+            self.send_error(f'Failed to send file: {e}')
 
     def on_task_finish(self) -> None:
         """任务完成回调。"""
@@ -549,4 +833,39 @@ class DiscordBotUser(BaseUser):
                 self._active_channel_id,
                 f'Failed to save model: {e}'
             )
+            return True
+
+    def _handle_clear_confirmation(self, user_message: str) -> bool:
+        """处理用户对清空操作的确认回复。
+
+        Args:
+            user_message: 用户回复的消息
+
+        Returns:
+            True 表示已处理
+        """
+        user_input = user_message.strip().lower()
+
+        # 检查是否确认
+        if user_input in ('y', 'yes'):
+            try:
+                # 清空模型层的对话历史
+                if self._agent:
+                    self._agent.clear_context()
+
+                    # 重置会话状态（token 统计等）
+                    self.session.reset()
+
+                    # 触发回调
+                    self.on_clear_context()
+
+                self._send_discord_message_by_api(self._active_channel_id, 'Context cleared.')
+                return True
+
+            except Exception as e:
+                self._send_discord_message_by_api(self._active_channel_id, f'Failed to clear context: {e}')
+                return True
+        else:
+            # 用户取消
+            self._send_discord_message_by_api(self._active_channel_id, 'Cancelled.')
             return True

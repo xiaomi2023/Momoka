@@ -25,6 +25,7 @@ Momoka can run as a Lark Bot, allowing you to communicate with Momoka through La
 2. Ensure the following permissions are enabled:
    - `im:message` - Receive and send messages
    - `im:message:send_as_bot` - Send messages as a bot
+   - `im:resource` - Obtaining and uploading image or file resources
    - `im:chat:readonly` - Read group chat information (optional)
    - `contact:user.id:readonly` - Read user IDs (optional)
 
@@ -86,6 +87,8 @@ python main.py --interface lark
 
 ### Starting a Conversation
 
+Please go to the "Messenger" interface, search for the robot you just created, 
+and send a message to start a conversation.  
 If you see the following message, the connection is successful:
 
 ```

@@ -46,6 +46,9 @@ class Session:
 
 class BaseUser(ABC):
     """用户交互抽象基类。"""
+    
+    # 接口类型标识，子类应覆盖此属性
+    interface_type: str = 'base'
 
     def __init__(self):
         self.session = Session()
@@ -65,6 +68,16 @@ class BaseUser(ABC):
         """向用户输出一条错误消息。"""
         ...
 
+    def send_file(self, file_path: str, caption: str = '') -> None:
+        """向用户发送一个文件（Discord/Lark 支持，CLI 默认只记录日志）。
+
+        Args:
+            file_path: 文件的绝对路径
+            caption: 可选的伴随消息
+        """
+        # 默认实现：只记录日志，子类可以覆盖此方法实现真正的文件发送
+        self.user_log(f'[send_file] {file_path}' + (f' | {caption}' if caption else ''))
+
     def user_log(self, message: str, end: str = '\n', role: str = 'LOG') -> None:
         """向用户输出日志消息（带角色标签）。
         
@@ -77,6 +90,10 @@ class BaseUser(ABC):
 
     def on_task_finish(self) -> None:
         """任务完成时的回调，子类可选择性覆盖。"""
+        pass
+
+    def on_clear_context(self) -> None:
+        """清空上下文时的回调，子类可选择性覆盖以输出提示。"""
         pass
 
     def on_session_end(self, input_tokens: int, output_tokens: int,

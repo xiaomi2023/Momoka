@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Any, Callable
 
 
 @dataclass
@@ -32,12 +32,14 @@ class ToolResult:
 class ToolContext:
     """工具执行所需的只读上下文。
 
-    有意不包含 user / work_model：
-      - user_log  由 router 统一处理，handler 只填写 ToolResult.log_msg
-      - work_model 的历史感知逻辑（如 browse_read 去重）也在 router 层完成
+    有意不包含 work_model：
+      - work_model 的历史感知逻辑（如 browse_read 去重）在 router 层完成
+    
+    user 为可选属性，某些工具（如 send_file）需要直接访问 user 接口。
     """
     cfg: dict
     input_func: Callable = field(default=input)
+    user: Any = field(default=None)
 
 
 class UnknownToolError(Exception):

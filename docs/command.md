@@ -13,6 +13,7 @@ You can type /command in the CLI interface to use the relevant command, for exam
 |----------------------|----------------------------------------|
 | `/end`               | End the current session                |
 | `/usage`             | Display usage statistics               |
+| `/clear`             | Clear conversation history             |
 | `/config`            | Show current configuration             |
 | `/working_config`    | Show runtime configuration             |
 | `/set <key> <value>` | Modify a configuration item            |

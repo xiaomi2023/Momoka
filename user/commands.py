@@ -19,10 +19,10 @@ from config import get_config
 @dataclass
 class SlashCommandCallbacks:
     """斜杠命令的回调接口，由具体平台实现。"""
-    
+
     send_message: Callable[[str], None]
     """发送消息到用户界面（平台负责渲染格式）"""
-    
+
     get_session_data: Callable[[], dict]
     """获取 session 数据，返回 dict 包含:
     - input_tokens: int
@@ -30,13 +30,13 @@ class SlashCommandCallbacks:
     - round_count: int
     - start_time: float
     """
-    
+
     get_config: Callable[[], dict]
     """获取当前静态配置 (config.json)"""
-    
+
     get_working_config: Callable[[], dict]
     """获取运行时配置 (working_config.json)"""
-    
+
     update_config: Callable[[str, object], bool]
     """更新配置项，返回 True 表示成功。
     Args:
@@ -45,15 +45,21 @@ class SlashCommandCallbacks:
     Returns:
         是否更新成功
     """
-    
+
     fetch_models: Callable[[], list[str]]
     """从 API 拉取可用模型列表"""
-    
+
     initialize_project: Callable[[], bool]
     """初始化项目，生成 AGENTS.md，返回是否成功"""
-    
+
     load_skill: Callable[[str], object]
     """加载指定 Skill，返回 load_result 对象（包含 success 属性）"""
+
+    clear_context: Callable[[], None]
+    """清空对话上下文"""
+
+    reset_session: Callable[[], None]
+    """重置会话状态（token 统计等）"""
 
 
 class SlashCommandHandler:
@@ -113,7 +119,12 @@ class SlashCommandHandler:
         if cmd == '/init':
             self._handle_init()
             return True, '__init__'
-        
+
+        # /clear - 清空对话历史
+        if cmd == '/clear':
+            self._handle_clear()
+            return True, '__clear_ask__'
+
         # /skill_name - 加载 Skill
         m = re.fullmatch(r'/([\w\-]+)', cmd)
         if m:
@@ -167,6 +178,7 @@ class SlashCommandHandler:
         help_text = (
             "  /end                — End session and show usage statistics\n"
             "  /usage              — Show current token usage\n"
+            "  /clear              — Clear conversation history\n"
             "  /config             — Show config\n"
             "  /working_config     — Show working_config\n"
             "  /set <key> <value>  — Modify configuration in config\n"
@@ -256,6 +268,15 @@ class SlashCommandHandler:
                 self.callbacks.send_message('Failed to generate AGENTS.md')
         except Exception as e:
             self.callbacks.send_message(f'Failed to generate AGENTS.md: {e}')
+
+    def _handle_clear(self) -> None:
+        """处理 /clear 命令。"""
+        # 发送确认提示
+        self.callbacks.send_message(
+            'Are you sure you want to clear the conversation history? Reply "y" or "yes" to confirm.'
+        )
+        # 注意：实际的清空操作需要等待用户确认后执行
+        # 平台层需要处理用户回复并调用 clear_context 和 reset_session
     
     @staticmethod
     def _infer_type(s: str) -> bool | int | float | str:

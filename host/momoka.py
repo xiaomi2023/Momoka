@@ -170,6 +170,11 @@ class Momoka:
         """Clear all injected skills after task completion."""
         self._model.clear_skills()
 
+    def clear_context(self):
+        """清空上下文，保留 system 消息（含预设对话）。"""
+        self._model.clear_history()
+        log('momoka.clear_context | 已清空对话历史')
+
     def _init_mcp_client(self):
         """Initialize MCP client"""
         # Ensure MCP logs are suppressed (in case main.py settings were overridden)
@@ -239,12 +244,11 @@ class Momoka:
     def _load_preset_conversations(self):
         """Load preset conversations from file."""
         preset_file = os.path.join(os.path.dirname(__file__), 'prompt', 'preset_convs.json')
-        try:
-            with open(preset_file, 'r', encoding='utf-8') as f:
-                preset_convs = json.load(f)
-            self._model._ctx.insert_preset_conversations(preset_convs)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            log(f'momoka._load_preset_conversations | Failed to load preset conversations: {e}')
+        log(f'momoka._load_preset_conversations | 尝试加载预设对话文件: {preset_file}')
+        with open(preset_file, 'r', encoding='utf-8') as f:
+            preset_convs = json.load(f)
+        log(f'momoka._load_preset_conversations | 加载成功，共 {len(preset_convs)} 条预设对话')
+        self._model._ctx.insert_preset_conversations(preset_convs)
 
     def repair_history(self) -> int:
         """Repair orphaned tool_calls messages in history."""

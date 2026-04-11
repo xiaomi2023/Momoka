@@ -26,6 +26,8 @@ class HeadlessUser(BaseUser):
     
     子类需实现 get_input_stream() 和 get_output_stream() 方法。
     """
+    
+    interface_type = 'headless'
 
     def __init__(self):
         super().__init__()
@@ -82,6 +84,9 @@ class HeadlessUser(BaseUser):
             'mode': 'headless'
         })
 
+        # 清空确认状态
+        self._waiting_for_clear_confirmation = False
+
         while True:
             try:
                 user_message = self.get_input()
@@ -97,6 +102,22 @@ class HeadlessUser(BaseUser):
             except json.JSONDecodeError:
                 # 非 JSON 格式，当作普通消息处理
                 msg = {'type': 'message', 'content': user_message}
+
+            # 如果正在等待清空确认，处理用户的回复
+            if self._waiting_for_clear_confirmation:
+                self._waiting_for_clear_confirmation = False
+                msg_type = msg.get('type', 'message')
+                content = msg.get('content', '').strip().lower()
+                
+                if content in ('y', 'yes'):
+                    self._handle_clear()
+                else:
+                    self._write_json({
+                        'type': 'log',
+                        'role': 'SETTINGS',
+                        'content': 'Cancelled.'
+                    })
+                continue
 
             msg_type = msg.get('type', 'message')
 
@@ -241,7 +262,7 @@ class HeadlessUser(BaseUser):
 
     def _handle_slash_command(self, content: str) -> bool:
         """处理 slash 命令。
-        
+
         Returns:
             True 表示已处理，False 表示未处理
         """
@@ -259,8 +280,46 @@ class HeadlessUser(BaseUser):
             self._emit_config()
             return True
 
+        if content == '/clear':
+            self._handle_clear_ask()
+            return True
+
         # 其他 slash 命令暂不处理，交给 agent
         return False
+
+    def _handle_clear_ask(self) -> None:
+        """处理 /clear 命令（发送确认提示）。"""
+        self._write_json({
+            'type': 'question',
+            'role': 'SETTINGS',
+            'content': 'Are you sure you want to clear the conversation history? Reply "y" or "yes" to confirm.'
+        })
+        # 设置等待确认状态
+        self._waiting_for_clear_confirmation = True
+
+    def _handle_clear(self) -> None:
+        """处理 /clear 命令（执行清空操作）。"""
+        try:
+            # 清空模型层的对话历史
+            self._agent.clear_context()
+
+            # 重置会话状态（token 统计等）
+            self.session.reset()
+
+            # 触发回调
+            self.on_clear_context()
+
+            self._write_json({
+                'type': 'log',
+                'role': 'SETTINGS',
+                'content': 'Context cleared.'
+            })
+
+        except Exception as e:
+            self._write_json({
+                'type': 'error',
+                'content': f'Failed to clear context: {str(e)}'
+            })
 
 
 class StdioHeadlessUser(HeadlessUser):

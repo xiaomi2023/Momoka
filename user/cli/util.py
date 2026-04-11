@@ -16,6 +16,7 @@ from rich.text import Text
 SLASH_HELP = (
     "[bright_cyan]  /end                — End session and show usage statistics\n"
     "  /usage              — Show current token usage\n"
+    "  /clear              — Clear conversation history\n"
     "  /config             — Show config\n"
     "  /working_config     — Show working_config\n"
     "  /set <key> <value>  — Modify configuration in config\n"
@@ -24,6 +25,21 @@ SLASH_HELP = (
     "  /init               — Generate AGENTS.md for current project\n"
     "  /help               — Show help[/bright_cyan]\n"
 )
+
+
+def ask_yes_no(prompt: str) -> bool:
+    """Ask user for Y/N confirmation.
+
+    Returns:
+        True if user confirms (y/yes), False otherwise.
+    """
+    from rich.console import Console
+    console = Console()
+    try:
+        answer = console.input(prompt).strip().lower()
+        return answer in ('y', 'yes')
+    except (EOFError, KeyboardInterrupt):
+        return False
 
 
 def _infer_type(s: str) -> bool | int | float | str:
@@ -212,6 +228,10 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
         Console().print(f'[bright_cyan]Usage: Input {input_tokens} tokens | Output {output_tokens} tokens | '
               f'{round_count}R | Time taken {time_str}[/bright_cyan]')
         return True, None
+
+    if cmd == '/clear':
+        # 返回特殊标记，让主循环处理清空上下文（需要确认）
+        return True, '__clear_ask__'
 
     if cmd == '/config':
         try:

@@ -169,12 +169,19 @@ class Spinner:
 
 class CLIUser(BaseUser):
     """基于终端的用户交互实现。"""
+    
+    interface_type = 'cli'
 
     def __init__(self):
         super().__init__()
         self._agent = None
         self._start_time = 0.0
-        self._console = Console(highlight=False, soft_wrap=True)
+        # 根据是否交互动态设置 soft_wrap：
+        # 交互模式（tty）：禁止 soft_wrap（Rich 自动处理换行）
+        # 非交互模式（管道/文件）：启用 soft_wrap 防止长文本被截断
+        is_interactive = sys.stdout.isatty()
+        self._console = Console(highlight=False, soft_wrap=not is_interactive)
+        self._no_wrap = not is_interactive  # 保存为实例变量，用于 print 时传递
         self._system_monitor: SystemConfigMonitor | None = None
 
     def set_agent(self, agent):
@@ -254,7 +261,12 @@ class CLIUser(BaseUser):
                 if skill_name == '__init__':
                     self._handle_init_command()
                     continue
-                
+
+                # /clear 命令：清空上下文（需要确认）
+                if skill_name == '__clear_ask__':
+                    self._handle_clear_command()
+                    continue
+
                 # /skill_name 强制加载 skill
                 log(f'skill trigger: {skill_name}')
                 load_result = self._agent.load_skill(skill_name)
@@ -346,6 +358,37 @@ class CLIUser(BaseUser):
 
         except Exception as e:
             console.print(f'[bright_red]Failed to generate AGENTS.md: {e}[/bright_red]')
+
+    def _handle_clear_command(self) -> None:
+        """处理 /clear 命令，清空对话历史并重置会话状态（带确认提示）。"""
+        from rich.console import Console
+        from user.cli.util import ask_yes_no
+
+        console = Console()
+
+        try:
+            # 询问用户确认
+            confirmed = ask_yes_no(
+                '[bright_yellow]Are you sure you want to clear the conversation history? (Enter y or yes to confirm): [/bright_yellow]'
+            )
+
+            if not confirmed:
+                console.print('[dim]Cancelled.[/dim]')
+                return
+
+            # 清空模型层的对话历史
+            self._agent.clear_context()
+
+            # 重置会话状态（token 统计等）
+            self.session.reset()
+
+            # 触发回调
+            self.on_clear_context()
+
+            console.print('[bright_cyan]Context cleared.[/bright_cyan]')
+
+        except Exception as e:
+            console.print(f'[bright_red]Failed to clear context: \n{e}[/bright_red]')
 
     def on_session_end(self, input_tokens: int, output_tokens: int,
                        round_count: int, elapsed: float) -> None:

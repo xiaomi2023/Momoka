@@ -37,6 +37,8 @@ class LarkBotUser(BaseUser):
     
     使用 WebSocket 长连接模式，无需公网 IP 或 verification_token。
     """
+    
+    interface_type = 'lark'
 
     def __init__(
         self,
@@ -205,10 +207,256 @@ class LarkBotUser(BaseUser):
 
                 log(f'lark | receive from {chat_id}: {text}')
                 self._put_message(chat_id, text)
+            elif msg_type == 'file':
+                # 处理文件消息
+                self._handle_file_message(message, chat_id)
             else:
                 log(f'lark | unsupported message type: {msg_type}')
         except Exception as e:
             log(f'lark | parse message error: {e}')
+
+    def _handle_file_message(self, message, chat_id: str) -> None:
+        """处理接收到的文件消息。
+
+        Args:
+            message: 飞书消息对象
+            chat_id: 聊天 ID
+        """
+        try:
+            content = message.content
+            message_id = message.message_id
+            try:
+                content_obj = json.loads(content)
+                file_key = content_obj.get('file_key', '')
+                file_name = content_obj.get('file_name', 'unknown_file')
+            except:
+                log(f'lark | failed to parse file message content')
+                return
+
+            if not file_key:
+                log(f'lark | file_key is empty')
+                return
+
+            log(f'lark | receive file from {chat_id}: {file_name} (key: {file_key}, msg_id: {message_id})')
+
+            # 下载文件（使用消息资源接口，因为文件是用户发送的）
+            file_path = self._download_lark_file_from_message(message_id, file_key, file_name)
+            if file_path:
+                # 读取文件内容
+                file_content = self._read_file_content(file_path, file_name)
+                if file_content:
+                    # 将文件内容作为消息放入队列
+                    message_text = f"[User uploaded file: {file_name}]\n\n{file_content}"
+                    self._put_message(chat_id, message_text)
+                    log(f'lark | file content queued: {file_name}')
+                else:
+                    self._put_message(chat_id, f"[User uploaded file: {file_name}]\n[File downloaded to: {file_path} but could not be read as text]")
+            else:
+                log(f'lark | failed to download file: {file_name}')
+                self._send_lark_message(chat_id, f"Failed to receive file: {file_name}")
+        except Exception as e:
+            log(f'lark | handle file message error: {e}')
+            import traceback
+            log(f'lark | traceback: {traceback.format_exc()}')
+
+    def _download_lark_file_from_message(self, message_id: str, file_key: str, file_name: str) -> str | None:
+        """从飞书消息中下载资源文件（用于下载用户发送的文件）。
+
+        注意：下载用户发送的文件需要使用 /messages/{message_id}/resources/{file_key} 接口，
+        而不是 /files/{file_key} 接口。后者只能下载机器人自己上传的文件。
+
+        Args:
+            message_id: 飞书消息 ID
+            file_key: 飞书文件 key
+            file_name: 文件名
+
+        Returns:
+            下载后的本地文件路径，失败返回 None
+        """
+        try:
+            import os
+            import tempfile
+            import uuid
+            import requests
+
+            # 获取 tenant_access_token
+            token = self._get_tenant_access_token()
+            if not token:
+                log(f'lark | failed to get tenant_access_token')
+                return None
+
+            # 构建下载 URL（使用消息资源接口）
+            url = f'https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/resources/{file_key}?type=file'
+
+            # 发送下载请求
+            headers = {
+                'Authorization': f'Bearer {token}'
+            }
+            response = requests.get(url, headers=headers, timeout=60)
+
+            if response.status_code != 200:
+                log(f'lark | download file failed: {response.status_code} {response.text}')
+                return None
+
+            # 保存文件到临时目录
+            work_dir = get_config().get('work_dir', tempfile.gettempdir())
+            temp_dir = os.path.join(work_dir, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+
+            # 生成唯一文件名避免冲突
+            unique_name = f"{uuid.uuid4().hex[:8]}_{file_name}"
+            file_path = os.path.join(temp_dir, unique_name)
+
+            # 写入文件
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+
+            log(f'lark | file downloaded to: {file_path}')
+            return file_path
+
+        except Exception as e:
+            log(f'lark | download file error: {e}')
+            import traceback
+            log(f'lark | traceback: {traceback.format_exc()}')
+            return None
+
+    def _get_tenant_access_token(self) -> str | None:
+        """获取飞书 tenant_access_token。
+
+        Returns:
+            token 字符串，失败返回 None
+        """
+        try:
+            import requests
+            import json
+
+            url = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal'
+            headers = {
+                'Content-Type': 'application/json; charset=utf-8'
+            }
+            payload = {
+                'app_id': self._app_id,
+                'app_secret': self._app_secret
+            }
+
+            response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=30)
+            result = response.json()
+
+            if result.get('code') != 0:
+                log(f'lark | get tenant_access_token failed: {result}')
+                return None
+
+            return result.get('tenant_access_token')
+
+        except Exception as e:
+            log(f'lark | get tenant_access_token error: {e}')
+            return None
+
+    def _read_file_content(self, file_path: str, file_name: str) -> str | None:
+        """读取文件内容为文本。
+
+        Args:
+            file_path: 文件路径
+            file_name: 文件名
+
+        Returns:
+            文件文本内容，如果不是文本文件返回 None
+        """
+        import os
+
+        # 检查文件大小（限制 10MB）
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_size = os.path.getsize(file_path)
+        if file_size > max_size:
+            return f"[File too large: {file_size / 1024 / 1024:.2f}MB, max 10MB]"
+
+        # 根据扩展名判断文件类型
+        ext = os.path.splitext(file_name)[1].lower()
+
+        # 文本文件扩展名
+        text_extensions = {
+            '.txt', '.md', '.py', '.js', '.ts', '.html', '.css', '.json',
+            '.xml', '.yaml', '.yml', '.csv', '.log', '.ini', '.conf',
+            '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
+            '.c', '.cpp', '.h', '.hpp', '.java', '.go', '.rs', '.swift',
+            '.kt', '.scala', '.rb', '.php', '.pl', '.lua', '.r', '.m',
+            '.sql', '.dockerfile', '.makefile', '.cmake', '.gradle',
+            '.vue', '.jsx', '.tsx', '.svelte', '.less', '.scss', '.sass',
+        }
+
+        # Office 文档扩展名（需要特殊处理）
+        office_extensions = {
+            '.docx', '.xlsx', '.pptx',
+        }
+
+        if ext in office_extensions:
+            return self._read_office_file(file_path, ext)
+
+        # 尝试作为文本文件读取
+        if ext in text_extensions or ext not in {'.pdf', '.doc', '.xls', '.ppt', '.zip', '.rar', '.7z', '.tar', '.gz', '.exe', '.dll', '.so', '.dylib'}:
+            return self._try_read_text_file(file_path)
+
+        return None
+
+    def _try_read_text_file(self, file_path: str) -> str | None:
+        """尝试以文本方式读取文件。
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            文件内容，如果读取失败返回 None
+        """
+        encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1', 'cp1252']
+
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                return content
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                log(f'lark | read file error with {encoding}: {e}')
+                continue
+
+        return None
+
+    def _read_office_file(self, file_path: str, ext: str) -> str | None:
+        """读取 Office 文档内容。
+
+        Args:
+            file_path: 文件路径
+            ext: 文件扩展名
+
+        Returns:
+            文档文本内容
+        """
+        try:
+            if ext == '.docx':
+                from docx import Document
+                doc = Document(file_path)
+                paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+                return '\n'.join(paragraphs)
+            elif ext == '.xlsx':
+                from openpyxl import load_workbook
+                wb = load_workbook(file_path, data_only=True)
+                lines = []
+                for sheet in wb.worksheets:
+                    lines.append(f'--- Sheet: {sheet.title} ---')
+                    for row in sheet.iter_rows(values_only=True):
+                        row_text = ' | '.join(str(cell) if cell is not None else '' for cell in row)
+                        if row_text.strip():
+                            lines.append(row_text)
+                return '\n'.join(lines)
+            elif ext == '.pptx':
+                # python-pptx 需要单独安装，这里简单返回提示
+                return "[PPTX file - content extraction not supported]"
+        except Exception as e:
+            log(f'lark | read office file error: {e}')
+            return f"[Failed to read {ext} file: {e}]"
+
+        return None
 
     def run(self) -> None:
         """启动飞书 Bot 会话循环。"""
@@ -266,6 +514,9 @@ class LarkBotUser(BaseUser):
         waiting_for_model_choice = False
         pending_models: list[str] = []
 
+        # 清空确认状态
+        waiting_for_clear_confirmation = False
+
         while True:
             # 检查所有队列
             active_chat_id = None
@@ -294,6 +545,12 @@ class LarkBotUser(BaseUser):
                 if self._handle_model_choice(user_message, pending_models):
                     continue
                 # 如果选择无效，继续作为普通消息处理
+
+            # 如果正在等待清空确认，处理用户的回复
+            if waiting_for_clear_confirmation:
+                waiting_for_clear_confirmation = False
+                if self._handle_clear_confirmation(user_message):
+                    continue
 
             if self._agent is None:
                 self._send_lark_message(active_chat_id, "Error: Agent not initialized")
@@ -332,6 +589,10 @@ class LarkBotUser(BaseUser):
                         break
                     # /init 命令
                     if skill_name == '__init__':
+                        continue
+                    # /clear 命令（等待用户确认）
+                    if skill_name == '__clear_ask__':
+                        waiting_for_clear_confirmation = True
                         continue
                     # Skill 加载
                     if skill_name is not None:
@@ -391,6 +652,158 @@ class LarkBotUser(BaseUser):
     def send_error(self, message: str) -> None:
         """输出错误消息。"""
         log(f'lark ERROR | {message}')
+
+    def send_file(self, file_path: str, caption: str = '') -> None:
+        """向用户发送一个文件（飞书支持文件消息）。
+
+        Args:
+            file_path: 文件的绝对路径
+            caption: 可选的伴随消息
+        """
+        import os
+
+        log(f'lark | send_file: {file_path} | caption: {caption}')
+
+        # 验证文件是否存在
+        if not os.path.exists(file_path):
+            log(f'lark | send_file error: file not found: {file_path}')
+            self.send_error(f'File not found: {file_path}')
+            return
+
+        # 如果有活跃的聊天 ID，发送文件到飞书
+        if self._active_chat_id:
+            self._send_lark_file(self._active_chat_id, file_path, caption)
+
+    def _send_lark_file(self, chat_id: str, file_path: str, caption: str = '') -> None:
+        """发送文件到飞书（先上传获取 file_key，再发送文件消息）。
+
+        Args:
+            chat_id: 聊天 ID
+            file_path: 文件路径
+            caption: 可选的伴随消息
+        """
+        import os
+
+        try:
+            client = self._get_client()
+            file_name = os.path.basename(file_path)
+
+            log(f'lark | uploading file: {file_name}')
+
+            # 判断文件类型
+            file_ext = os.path.splitext(file_name)[1].lower()
+            image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+            is_image = file_ext in image_extensions
+
+            if is_image:
+                # 图片文件：使用 image API
+                from lark_oapi.api.im.v1 import (
+                    CreateImageRequest,
+                    CreateImageRequestBody,
+                )
+
+                # 图片 API 需要重新打开文件
+                with open(file_path, 'rb') as img_file:
+                    upload_request = (
+                        CreateImageRequest.builder()
+                        .request_body(
+                            CreateImageRequestBody.builder()
+                            .image_type('message')
+                            .image(img_file)
+                            .build()
+                        )
+                        .build()
+                    )
+
+                    upload_response = client.im.v1.image.create(upload_request)
+
+                if not upload_response.success():
+                    log(f'lark | image upload failed: {upload_response.code} {upload_response.msg}')
+                    self.send_error(f'Failed to upload image: {upload_response.msg}')
+                    return
+
+                image_key = upload_response.data.image_key
+                log(f'lark | image uploaded, image_key: {image_key}')
+
+                # 发送图片消息
+                msg_content = json.dumps({"image_key": image_key})
+                msg_type = 'image'
+            else:
+                # 普通文件：使用 file API
+                from lark_oapi.api.im.v1 import (
+                    CreateFileRequest,
+                    CreateFileRequestBody,
+                )
+
+                # 使用 'stream' 作为通用文件类型（飞书官方推荐）
+                # 参考: https://open.feishu.cn/document/server-docs/im-v1/file/create
+                file_type = 'stream'
+
+                # 重新打开文件，传入文件对象而不是 bytes
+                with open(file_path, 'rb') as file_stream:
+                    upload_request = (
+                        CreateFileRequest.builder()
+                        .request_body(
+                            CreateFileRequestBody.builder()
+                            .file_type(file_type)
+                            .file_name(file_name)
+                            .file(file_stream)
+                            .build()
+                        )
+                        .build()
+                    )
+
+                    upload_response = client.im.v1.file.create(upload_request)
+
+                if not upload_response.success():
+                    log(f'lark | file upload failed: {upload_response.code} {upload_response.msg}')
+                    self.send_error(f'Failed to upload file: {upload_response.msg}')
+                    return
+
+                file_key = upload_response.data.file_key
+                log(f'lark | file uploaded, file_key: {file_key}')
+
+                # 发送文件消息
+                msg_content = json.dumps({"file_key": file_key})
+                msg_type = 'file'
+
+            # 发送消息
+            from lark_oapi.api.im.v1 import (
+                CreateMessageRequest as LarkCreateMessageRequest,
+                CreateMessageRequestBody as LarkCreateMessageRequestBody,
+            )
+
+            message_request = (
+                LarkCreateMessageRequest.builder()
+                .receive_id_type('chat_id')
+                .request_body(
+                    LarkCreateMessageRequestBody.builder()
+                    .receive_id(chat_id)
+                    .msg_type(msg_type)
+                    .content(msg_content)
+                    .build()
+                )
+                .build()
+            )
+
+            message_response = client.im.v1.message.create(message_request)
+
+            if not message_response.success():
+                log(f'lark | send file message failed: {message_response.code} {message_response.msg}')
+                self.send_error(f'Failed to send file message: {message_response.msg}')
+                return
+
+            log(f'lark | file sent: {file_name}')
+
+            # 如果有 caption，再发送一条文本消息
+            if caption:
+                self._send_lark_message(chat_id, caption)
+
+        except Exception as e:
+            log(f'lark | send file error: {e}')
+            import traceback
+            log(f'lark | traceback: {traceback.format_exc()}')
+            self.send_error(f'Failed to send file: {e}')
 
     def on_task_finish(self) -> None:
         """任务完成回调。"""
@@ -499,4 +912,39 @@ class LarkBotUser(BaseUser):
                 self._active_chat_id,
                 f'Failed to save model: {e}'
             )
+            return True
+
+    def _handle_clear_confirmation(self, user_message: str) -> bool:
+        """处理用户对清空操作的确认回复。
+
+        Args:
+            user_message: 用户回复的消息
+
+        Returns:
+            True 表示已处理
+        """
+        user_input = user_message.strip().lower()
+
+        # 检查是否确认
+        if user_input in ('y', 'yes'):
+            try:
+                # 清空模型层的对话历史
+                if self._agent:
+                    self._agent.clear_context()
+
+                    # 重置会话状态（token 统计等）
+                    self.session.reset()
+
+                    # 触发回调
+                    self.on_clear_context()
+
+                self._send_lark_message(self._active_chat_id, 'Context cleared.')
+                return True
+
+            except Exception as e:
+                self._send_lark_message(self._active_chat_id, f'Failed to clear context: {e}')
+                return True
+        else:
+            # 用户取消
+            self._send_lark_message(self._active_chat_id, 'Cancelled.')
             return True

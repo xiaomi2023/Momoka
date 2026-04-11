@@ -101,23 +101,31 @@ def main():
     initialize_working_config()
 
     args = parse_args()
+    
+    # 导入并设置当前接口类型
+    from user import set_current_interface
 
     # Select user interface based on mode
     if args.headless == 'stdio':
         from user.headless import StdioHeadlessUser
         ui = StdioHeadlessUser()
+        set_current_interface('headless')
     elif args.headless == 'file':
         from user.headless import FileHeadlessUser
         ui = FileHeadlessUser(
             input_file=args.input,
             output_file=args.output
         )
+        set_current_interface('headless')
     else:
         # 确定接口类型: 命令行参数 > 配置文件
         interface = args.interface
         if interface is None:
             cfg = get_config()
             interface = cfg.get('interface', 'cli')
+        
+        # 设置当前接口类型
+        set_current_interface(interface)
 
         if interface == 'lark':
             from user.lark_bot import LarkBotUser
