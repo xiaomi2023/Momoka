@@ -16,7 +16,7 @@
 
 ---
 
-**Momoka** 是一个本地运行的 Agent 助手。通过CLI、Discord、飞书与 Momoka 交流或发送任务。编写代码、整理文档、浏览网页……一切只需一行需求。
+**Momoka** 是一个本地运行的 Agent 助手。通过CLI、Discord、飞书、QQ与 Momoka 交流或发送任务。编写代码、整理文档、浏览网页……一切只需一行需求。
 
 ### 🎉 2026.4 更新
 - 🔌 全面接入 MCP Server 生态
