@@ -15,8 +15,6 @@ TOOL_DEFINITIONS: list[dict] = [
             'name': 'get_skill',
             'description': (
                 'Load Agent Skills standard format skill files (SKILL.md) or scripts/resources within a skill when needed. '
-                'Skill directory structure: <name>/SKILL.md, scripts/ (executable scripts), '
-                'references/ (reference documents), assets/ (templates and binary resources).'
             ),
             'parameters': {
                 'type': 'object',
