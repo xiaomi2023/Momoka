@@ -27,7 +27,7 @@ TOOL_DEFINITIONS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'set_todolist',
-            'description': 'Display a todo list. Use this tool when you need to perform complex or multi-step tasks.',
+            'description': 'Display a todo list. Use this tool when you need to complete a complex task.',
             'parameters': {
                 'type': 'object',
                 'properties': {
