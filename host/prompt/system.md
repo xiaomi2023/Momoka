@@ -13,7 +13,7 @@ Skills can provide:
 - Specialized knowledge
 - Workflow patterns
 - Tool integrations
-- Reference material
+- Reference material  
 </what is Skills?>
 
 Principle: 
