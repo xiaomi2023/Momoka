@@ -16,7 +16,7 @@
 
 ---
 
-**Momoka** is a locally running AI Agent assistant. Communicate with Momoka or send tasks via CLI, Discord, or Lark. Write code, organize documents, browse the web... everything with just a single line of request.
+**Momoka** is a locally running AI Agent assistant. Communicate with Momoka or send tasks via CLI, Discord, Lark or QQ. Write code, organize documents, browse the web... everything with just a single line of request.
 
 ### 🎉 April 2026 Update
 - 🔌 Fully integrated with MCP Server ecosystem
