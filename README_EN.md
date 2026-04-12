@@ -22,6 +22,7 @@
 - 🔌 Fully integrated with MCP Server ecosystem
 - 🧩 Support for custom Momoka Servers
 - 🛠️ More secure system configuration monitoring mechanism
+- 🤖 Integrated with Discord and Lark
 
 ### 🎉 March 2026 Update
 <details>
@@ -40,16 +41,24 @@
 #### Connect to any AI model supporting OpenAI SDK such as ChatGPT, Gemini, Claude, Deepseek, GLM, Kimi, and run Momoka in the terminal.
 
 <div align="center">
-  <img src="image/1.gif" width="400">
+  <img src="image/1.png" width="400">
 </div>
 
 - #### With rich built-in tools, Momoka can automatically complete the full process of project building, debugging and iteration.
 
 <div align="center">
-  <img src="image/2.gif" width="400">
+  <img src="image/2.png" width="400">
 </div>
 
-- #### Through optimized web page parsing and browser fingerprint, Momoka improves task success rate and reduces token consumption in complex web environments.
+<div align="center">
+  <img src="image/4.png" width="400">
+</div>
+
+- #### Through optimized web page parsing and browser fingerprint, Momoka improves task success rate and reduces context window in complex web environments.
+
+<div align="center">
+  <img src="image/3.png" width="400">
+</div>
 
 ## 🚀 Quick Start
 
@@ -93,6 +102,7 @@ Send a test message to ensure everything is ready, then you can chat with Momoka
 ## 🤖 More Platforms
 - [Discord](https://xiaomi2023.github.io/Momoka/discord/)
 - [Lark](https://xiaomi2023.github.io/Momoka/lark/)
+- [QQ](https://xiaomi2023.github.io/Momoka/qq/)
 
 ## 📄 More Information
 For operation guides, configuration, extensions and more information, please refer to [Momoka Documentation](https://xiaomi2023.github.io/Momoka/).

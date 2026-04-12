@@ -41,16 +41,24 @@
 #### 连接至ChatGPT、Gemini、Claude、Deepseek、GLM、Kimi等支持Openai SDK的任意AI模型，并在终端中运行Momoka。
 
 <div align="center">
-  <img src="image/1.gif" width="400">
+  <img src="image/1.png" width="400">
 </div>
 
 - #### 运用丰富的内置工具，Momoka可以自动完成项目构建、调试和迭代的全流程。
 
 <div align="center">
-  <img src="image/2.gif" width="400">
+  <img src="image/2.png" width="400">
 </div>
 
-- #### 通过经过优化的网页解析和浏览器指纹，Momoka可以在复杂的网页环境中提高任务成功率及降低Token消耗。
+<div align="center">
+  <img src="image/4.png" width="400">
+</div>
+
+- #### 通过经过优化的网页解析和浏览器指纹，Momoka可以在复杂的网页环境中提高任务成功率及缩小上下文窗口。
+
+<div align="center">
+  <img src="image/3.png" width="400">
+</div>
 
 ## 🚀 快速开始
 
@@ -94,6 +102,7 @@ python main.py
 ## 🤖 更多平台
 - [Discord](https://xiaomi2023.github.io/Momoka/discord/)
 - [Lark/飞书](https://xiaomi2023.github.io/Momoka/lark/)
+- [QQ](https://xiaomi2023.github.io/Momoka/qq/)
 
 ## 📄 更多信息
 获取操作指南、配置、拓展等更多信息，请参考[Momoka 文档](https://xiaomi2023.github.io/Momoka/)。

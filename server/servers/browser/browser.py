@@ -189,8 +189,7 @@ def browser_click(element_uuid: str) -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '<The Mapping is empty, consider calling browse_read first>'
-        return f"<Failed to Click: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Click: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(page, item)
@@ -215,8 +214,7 @@ def browser_fill(element_uuid: str, text: str) -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '<The Mapping is empty, consider calling browse_read first>'
-        return f"<Failed to Fill: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Fill: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     role = item['role']
     label = f"[{element_uuid}] {role} \"{item['name']}\""
@@ -275,8 +273,7 @@ def browser_press(element_uuid: str, key: str) -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
-        return f"<Failed to Press: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Press: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(page, item)
@@ -429,8 +426,7 @@ def browser_hover(element_uuid: str) -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
-        return f"<Failed to Hover: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Hover: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(page, item)
@@ -458,8 +454,7 @@ def browser_select(element_uuid: str, value: str) -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
-        return f"<Failed to Select: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Select: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
     handle = _resolve_element(page, item)
@@ -577,8 +572,7 @@ def browser_upload(element_uuid: str, file_paths: list[str] | str) -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
-        return f"<Failed to Upload: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Upload: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
 
@@ -623,8 +617,7 @@ def browser_download(element_uuid: str, save_dir: str = ".") -> str:
 
     item = get_item_map().get(element_uuid)
     if item is None:
-        known = ', '.join(get_item_map().keys()) or '(Mapping is empty, consider calling browse_read first)'
-        return f"<Failed to Download: ID {element_uuid!r} does not exist. Available IDs: {known}>"
+        return f"<Failed to Download: ID {element_uuid!r} does not exist. Consider use browser_read(string=interactive)>"
 
     label = f"[{element_uuid}] {item['role']} \"{item['name']}\""
 
