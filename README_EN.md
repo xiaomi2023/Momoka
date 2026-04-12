@@ -41,23 +41,23 @@
 #### Connect to any AI model supporting OpenAI SDK such as ChatGPT, Gemini, Claude, Deepseek, GLM, Kimi, and run Momoka in the terminal.
 
 <div align="center">
-  <img src="image/1.png" width="400">
+  <img src="image/1.png" width="600">
 </div>
 
 - #### With rich built-in tools, Momoka can automatically complete the full process of project building, debugging and iteration.
 
 <div align="center">
-  <img src="image/2.png" width="400">
+  <img src="image/2.png" width="600">
 </div>
 
 <div align="center">
-  <img src="image/4.png" width="400">
+  <img src="image/4.png" width="600">
 </div>
 
 - #### Through optimized web page parsing and browser fingerprint, Momoka improves task success rate and reduces context window in complex web environments.
 
 <div align="center">
-  <img src="image/3.png" width="400">
+  <img src="image/3.png" width="600">
 </div>
 
 ## 🚀 Quick Start
