@@ -355,6 +355,3 @@ def read_sheet(args: dict, ctx: ToolContext) -> ToolResult:
                  f'Consider using the absolute path of the file>',
             log_msg=log_label,
         )
-
-
-# ── read_sheet ────────────────────────────────────────────────────────────
