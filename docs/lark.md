@@ -7,8 +7,8 @@ Momoka can run as a Lark Bot, allowing you to communicate with Momoka through La
 ### Step 1: Create an Application
 
 1. Visit the [Lark Open Platform](https://open.larksuite.com/) or [Feishu Open Platform](https://open.feishu.cn/)
-2. Click **"Create Application"**
-3. Select **"Enterprise Custom Application"**
+2. Enter the developer backend
+3. Click **"Create Enterprise Custom Application"**
 4. Enter the application name and description
 5. Click **"Create"**
 

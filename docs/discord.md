@@ -10,11 +10,9 @@ Momoka can run as a Discord Bot, allowing you to communicate with Momoka through
 2. Click **"New Application"**
 3. Enter a name (e.g., "Momoka Bot") and click **"Create"**
 
-### Step 2: Create a Bot User
+### Step 2: Create a Bot
 
-1. In the application, navigate to **"Bot"** in the left sidebar
-2. Click **"Add Bot"**
-3. Click **"Yes, do it!"** to confirm
+1. On the "Basic Information" screen, fill in the Bot's name and other basic information.
 
 ### Step 3: Obtain Bot Token
 

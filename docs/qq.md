@@ -7,38 +7,11 @@ Momoka can run as a QQ Bot, allowing you to communicate with Momoka through QQ.
 ### Step 1: Register on QQ Open Platform
 
 1. Visit the [QQ Open Platform](https://q.qq.com/)
-2. Register a developer account (enterprise or individual)
-3. Log in to the developer management console
+2Log in to the Open Platform Official Website
 
-### Step 2: Create an Application and Obtain Credentials
+### Step 2: Create an Bot and Obtain Credentials
 
-1. In the management console, click **"Create Application"**
-2. Enter the application name and description
-3. Click **"Create"**
-4. In the application management page, find and copy the following information:
-   - **App ID**
-   - **App Secret**
-
-### Step 3: Configure Bot Capabilities
-
-1. Navigate to the "Bot Configuration" page in the application management console
-2. Enable bot capabilities:
-   - Enable **"Group Chat"** capability
-   - Enable **"Direct Message"** capability
-3. Configure message receiving method: Select **WebSocket** mode
-
-### Step 4: Configure Intent Subscriptions
-
-1. Navigate to the "Event Subscription" or "Intent Configuration" page
-2. Ensure the following events are subscribed:
-   - `GROUP_AT_MESSAGE_CREATE` - Group @messages
-   - `C2C_MESSAGE_CREATE` - Direct messages
-
-### Step 5: Configure Domain and Permissions
-
-1. Configure the message domain in the bot management page
-2. Ensure the bot has obtained message send/receive permissions
-3. If publishing is required, go to "Version Management & Release" to submit for review
+Create a Bot, then find and copy **App ID** and **App Secret**
 
 ## Configuration
 
@@ -89,9 +62,9 @@ Please add the bot to a QQ group, or find the bot in QQ and send a message to st
 If you see the following message, the connection is successful:
 
 ```
-Successfully connected to Momoka! ๑>ᴗ•๑
+Successfully connected to QQ
 Welcome back! This is Momoka~
-For more help, type /help
+Developed by Mikoris | For more help, type /help
 ```
 
 ### Group Chat Usage
