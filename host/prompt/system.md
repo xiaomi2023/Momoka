@@ -14,6 +14,7 @@ Skills can provide:
 - Workflow patterns
 - Tool integrations
 - Reference material  
+
 </what is Skills?>
 
 Principle: 
