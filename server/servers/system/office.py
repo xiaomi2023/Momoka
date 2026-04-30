@@ -57,7 +57,8 @@ _HEADING_MAP = {
 }
 
 
-def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
+def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str,
+              start_line: int | None = None, end_line: int | None = None) -> ToolResult:
     """Extract Word document to Markdown format using python-docx."""
     if not _HAS_DOCX:
         return ToolResult(
@@ -81,7 +82,7 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
         lo = shutil.which('libreoffice') or shutil.which('soffice')
         if not lo:
             return ToolResult(
-                text=f'<Reading {ext} format requires LibreOffice, but libreoffice / soffice command not found>',
+                text=f'<Attempted to read {ext} by LibreOffice, but libreoffice / soffice command not found>',
                 log_msg=log_label,
             )
         tmp_dir = tempfile.mkdtemp()
@@ -144,20 +145,42 @@ def read_docx(file_path: str, encoding: str, max_lines: int, log_label: str) -> 
         lines.append('')
 
     md_content = '\n'.join(lines)
-    line_count = len(md_content.splitlines())
-    if line_count > max_lines:
-        return ToolResult(
-            text=(f'<File too large: {file_path} ({line_count} lines after extraction, current line limit: {max_lines}), '
-                  f'Consider using set_read_limits to increase the limits>'),
-            log_msg=log_label,
-        )
+    all_lines = md_content.splitlines()
+    total_lines = len(all_lines)
+
+    # 应用行号范围过滤
+    if start_line is not None or end_line is not None:
+        actual_start = start_line if start_line is not None else 1
+        actual_end = end_line if end_line is not None else total_lines
+
+        if actual_start < 1 or actual_end > total_lines or actual_start > actual_end:
+            return ToolResult(
+                text=(f'<Invalid line range: {actual_start}-{actual_end} '
+                      f'(file has {total_lines} lines, 1-based)>'),
+                log_msg=log_label,
+            )
+
+        selected_lines = all_lines[actual_start - 1 : actual_end]
+        md_content = '\n'.join(selected_lines)
+        line_count = len(selected_lines)
+        range_info = f' ({actual_start}-{actual_end} of {total_lines})'
+    else:
+        line_count = total_lines
+        range_info = ''
+
+        if line_count > max_lines:
+            return ToolResult(
+                text=(f'<File too large: {file_path} ({line_count} lines after extraction, current line limit: {max_lines}), '
+                      f'Consider using set_read_limits to increase the limits>'),
+                log_msg=log_label,
+            )
+
     file_name = os.path.basename(file_path)
     return ToolResult(
-        text=f'<Opened File {file_name} in {file_path}>\n'
+        text=f'<Opened File {file_name} in {file_path}{range_info}>\n'
              f'<{file_name}>\n'
              f'{md_content}\n'
              f'</{file_name}>',
-        file_contents={file_path: md_content},
         log_msg=log_label,
     )
 
@@ -261,8 +284,7 @@ def read_sheet_tool(file_path: str, sheet_name: str, sheet_mode: str,
             parts.append(f'[{target_name}] Formula Cells: (none)')
 
     result = '\n'.join(parts)
-    file_key = f'{file_path}::{target_name}'
-    return ToolResult(text=result, file_contents={file_key: result}, log_msg=log_label)
+    return ToolResult(text=result, log_msg=log_label)
 
 
 def _read_csv_file(file_path: str, encoding: str, max_lines: int, log_label: str) -> ToolResult:
@@ -283,7 +305,7 @@ def _read_csv_file(file_path: str, encoding: str, max_lines: int, log_label: str
     parts = [f'File: {file_path}', 'Format: CSV', '']
     parts.extend(csv_lines)
     result = '\n'.join(parts)
-    return ToolResult(text=result, file_contents={file_path: result}, log_msg=log_label)
+    return ToolResult(text=result, log_msg=log_label)
 
 
 def _ensure_xlsx(file_path: str, ext: str, xlsx_exts: set,
@@ -297,7 +319,7 @@ def _ensure_xlsx(file_path: str, ext: str, xlsx_exts: set,
     lo = shutil.which('libreoffice') or shutil.which('soffice')
     if not lo:
         return ToolResult(
-            text=(f'<Reading {ext} format requires LibreOffice, but libreoffice / soffice command not found. '
+            text=(f'<Attempted to read {ext} by LibreOffice, but libreoffice / soffice command not found. '
                   f'Consider manually saving the file as .xlsx format>'),
             log_msg=log_label,
         ), None

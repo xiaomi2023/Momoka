@@ -83,12 +83,11 @@ python main.py
 
 ### 配置
 
-运行后，输入以下命令以配置模型 API 的 Base Url 和 API Key，以及 Momoka 的工作目录：
+运行后，输入以下命令以配置模型 API 的 Base Url 和 API Key：
 
 ```bash
 /set base_url https://api.XXX.com
 /set api_key sk-***
-/set work_dir "C:\\Users\\..."
 ```
 
 重新运行程序，输入 **/model** 以选择模型。  

@@ -13,6 +13,9 @@ Usage:
     # CLI mode
     python main.py
 
+    # CLI mode with custom config
+    python main.py --config my_config.json
+
     # Headless mode (stdio)
     python main.py --headless stdio
 
@@ -35,11 +38,13 @@ Usage:
     python main.py --interface qq
 """
 
+import nest_asyncio
+nest_asyncio.apply()
 import argparse
 import logging
 import sys
 
-from config import get_config, initialize_working_config
+from config import get_config, initialize_working_config, set_config_file
 from host.momoka import Momoka
 from logger import log
 
@@ -58,6 +63,7 @@ def parse_args():
         epilog="""
 Examples:
   python main.py                           # CLI mode
+  python main.py --config my_config.json   # CLI mode with custom config
   python main.py --interface cli           # CLI mode (explicit)
   python main.py --interface telegram      # Telegram Bot
   python main.py --interface lark          # Lark/Feishu Bot
@@ -69,6 +75,12 @@ Examples:
            --input input.txt \\
            --output output.txt             # File I/O mode
         """
+    )
+
+    parser.add_argument(
+        '--config',
+        default=None,
+        help='Path to a custom configuration file (overrides config.json)'
     )
 
     parser.add_argument(
@@ -102,11 +114,20 @@ Examples:
 
 def main():
     """Program entry point."""
+    args = parse_args()
+
+    # 如果指定了 --config，优先使用自定义配置文件
+    if args.config:
+        try:
+            set_config_file(args.config)
+            log(f'config | 使用自定义配置文件: {args.config}')
+        except FileNotFoundError as e:
+            print(f'Error: {e}')
+            sys.exit(1)
+
     # 初始化运行时配置（确保每次启动从默认工作目录开始）
     initialize_working_config()
 
-    args = parse_args()
-    
     # 导入并设置当前接口类型
     from user import set_current_interface
 

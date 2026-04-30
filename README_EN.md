@@ -83,12 +83,11 @@ python main.py
 
 ### Configuration
 
-After running, enter the following commands in the console to configure the Base URL and API Key for the model API, as well as Momoka's working directory:
+After running, enter the following commands in the console to configure the Base URL and API Key for the model API:
 
 ```bash
 /set base_url https://api.XXX.com
 /set api_key sk-***
-/set work_dir "C:\\Users\\..."
 ```
 
 Rerun the program, then enter **/model** to select a model.

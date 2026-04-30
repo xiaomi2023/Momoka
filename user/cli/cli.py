@@ -57,6 +57,7 @@ _ROLE_COLORS: dict[str, str] = {
     'SETTINGS': 'bright_yellow',
     'TOOL':     'bright_cyan',
     'QUESTION': 'bright_cyan',
+    'OTHERS': 'bright_cyan',
 }
 
 TITLE = r"""
@@ -182,6 +183,7 @@ class CLIUser(BaseUser):
         is_interactive = sys.stdout.isatty()
         self._console = Console(highlight=False, soft_wrap=not is_interactive)
         self._no_wrap = not is_interactive  # 保存为实例变量，用于 print 时传递
+        self._is_interactive = is_interactive  # 是否交互式终端
         self._system_monitor: SystemConfigMonitor | None = None
 
     def set_agent(self, agent):
@@ -228,7 +230,12 @@ class CLIUser(BaseUser):
         while True:
             print()
             user_message = self.get_input()
-            print()
+            if self._is_interactive:
+                # 在用户输入和程序输出之间打印一条分隔线
+                self._console.rule(style='bright_black')
+
+            else:
+                print()
 
             if user_message.strip() == '/end':
                 self.on_session_end(
@@ -281,16 +288,16 @@ class CLIUser(BaseUser):
                 continue
 
             # 普通用户消息，交给 agent 处理
-            result = self._agent.send(
-                user_message,
-                file_contents=self.session.file_contents
-            )
+            result = self._agent.send(user_message)
 
             self.session.update(result)
 
+            # 在程序输出和用户输入之间打印一条分割线（仅交互式终端）
+            if self._is_interactive:
+                self._console.rule(style='bright_black')
+
             if result.is_finish:
                 self._agent.finish_task()
-                self.on_task_finish()
 
         # 停止系统配置监控
         if self._system_monitor:
@@ -316,7 +323,7 @@ class CLIUser(BaseUser):
 
         # BOT 角色：交互式终端使用 Markdown 渲染，非交互式使用纯文本输出
         if role == 'BOT':
-            if sys.stdout.isatty():
+            if self._is_interactive:
                 # 交互式终端：使用 Markdown 渲染
                 md = Markdown(message)
                 _console_md.print(md, end=end)
@@ -328,15 +335,13 @@ class CLIUser(BaseUser):
         # Rich 染色输出
         if role in _ROLE_COLORS:
             color = _ROLE_COLORS[role]
-            t = Text(("[" + role + "] " if self._console.color_system is None else "")
-                     + message, style=color)
-            self._console.print(t, end=end)
-        else:
-            # 其他角色直接打印
-            print(message, end=end)
 
-    def on_task_finish(self) -> None:
-        self.user_log('Ready')
+        else:
+            color = _ROLE_COLORS['OTHERS']
+
+        t = Text(("[" + role + "] " if self._console.color_system is None else "")
+                 + message, style=color)
+        self._console.print(t, end=end)
 
     def _handle_init_command(self) -> None:
         """处理 /init 命令，委托 Agent 层生成 AGENTS.md 文件。"""

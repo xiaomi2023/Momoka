@@ -4,7 +4,6 @@ Control Momoka's behavior and access various utilities using commands.
 You can type /command in the CLI interface to use the relevant command, for example:
 ```bash
 /help
-/set api_key sk-XXX
 ```
 
 ### Available Commands
@@ -16,7 +15,6 @@ You can type /command in the CLI interface to use the relevant command, for exam
 | `/clear`             | Clear conversation history             |
 | `/config`            | Show current configuration             |
 | `/working_config`    | Show runtime configuration             |
-| `/set <key> <value>` | Modify a configuration item            |
 | `/model`             | Configure the model                    |
 | `/help`              | Display help information               |
 | `/init`              | Generate AGENTS.md for current project |

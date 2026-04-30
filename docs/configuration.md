@@ -11,6 +11,5 @@ Parameters can be configured through the configuration file (config.json) to cus
 | `model`    | Model name to use (e.g., gpt-4o)                           |
 | `work_dir` | Default working directory path                             |
 | `encoding` | File encoding (default: utf-8)                             |
-| `fold`     | Fold history file content in output (true/false)           |
 | `mute_log` | List of roles to mute in logs (e.g., ["SHELL", "BROWSER"]) |
 | `prompt`   | Additional system prompt text                              |

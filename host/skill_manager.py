@@ -45,11 +45,10 @@ class SkillManager:
         ctx = ToolContext(cfg=cfg, input_func=input)
         result = _execute_tool('get_skill', {'skill_name': skill_name}, ctx)
 
-        # result is a ToolResult object
         skill_text = result.text
-        has_file_contents = bool(result.file_contents)
+        success = result.success
 
-        if has_file_contents:
+        if success:
             self._model.inject_skill(skill_name, skill_text)
             log(f'skill_manager.load_skill | Injected: {skill_name}')
             return SkillLoadResult(success=True, message=skill_text)

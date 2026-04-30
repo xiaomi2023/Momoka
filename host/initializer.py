@@ -22,17 +22,14 @@ class Initializer:
         self,
         send_func,
         finish_task_func,
-        get_user_file_contents_func,
     ) -> None:
         """
         Args:
             send_func: 等同于 Momoka.send 的函数
             finish_task_func: 等同于 Momoka.finish_task 的函数
-            get_user_file_contents_func: 获取用户会话中 file_contents 的函数
         """
         self._send = send_func
         self._finish_task = finish_task_func
-        self._get_user_file_contents = get_user_file_contents_func
 
     def initialize_project(self) -> bool:
         """为当前项目生成 AGENTS.md 文件。
@@ -61,18 +58,15 @@ class Initializer:
 
         try:
             # 使用 Agent 循环处理生成任务
-            result = self._send(
-                init_prompt,
-                file_contents=self._get_user_file_contents(),
-            )
+            self._send(init_prompt)
 
-            # 如果完成了，调用 finish_task 清理
-            if result.is_finish:
-                self._finish_task()
+            # 清理 skills
+            self._finish_task()
 
             log('initializer.initialize_project | Generation completed')
-            return result.is_finish
+            return True
 
         except Exception as e:
             log(f'initializer.initialize_project | Error: {e}')
             return False
+

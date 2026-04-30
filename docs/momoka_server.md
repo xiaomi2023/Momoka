@@ -17,7 +17,6 @@ Momoka provides the Tool Definitions to the model, enabling it to call them as n
 A data class representing the execution result of a tool:
 
 - `text`: str — Text content returned to the model
-- `file_contents`: dict[str, str] | None — Processed file information ({file_key: content})
 - `is_finish`: bool — Whether to end the task (default: False)
 - `log_msg`: str | list[tuple[str, str]] | None — Log message for the user
 - `log_role`: str | None — Log role/type
@@ -105,10 +104,6 @@ register_server(ServerRegistration(
 ### Conditional Tool Availability
 
 Using the `condition` parameter of `ServerRegistration`, you can specify a function that returns a `bool` to control tool availability. When `condition` returns `False`, all tools from that Momoka Server will not appear in the list returned by `get_available_tools()`, preventing Momoka from calling them.
-
-### Context Folding
-
-To reduce context window usage, Momoka supports automatic folding of historical data content. Each time a file is read, the `file_contents` field of `ToolResult` records the filename and content. When the same file is read multiple times or after a task round completes, the file content in the context will be replaced with a placeholder, keeping only the most recent content.
 
 ## Example
 

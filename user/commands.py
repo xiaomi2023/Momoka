@@ -227,7 +227,6 @@ class SlashCommandHandler:
                 "  model      — Model name to use (e.g., gpt-4o)\n"
                 "  work_dir   — Default working directory path\n"
                 "  encoding   — File encoding (default: utf-8)\n"
-                "  fold       — Fold history file content in output (true/false)\n"
                 "  mute_log   — List of roles to mute in logs (e.g., [\"SHELL\", \"BROWSER\"])\n"
                 "  prompt     — Additional system prompt text\n\n"
                 "Usage: /set <key> <value>"

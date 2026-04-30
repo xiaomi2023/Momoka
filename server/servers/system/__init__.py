@@ -1,7 +1,7 @@
 """
 server/servers/system/__init__.py —— System 模块自动注册。
 
-涵盖: system_command / change_directory / finish / read_file / edit_file / replace_file / read_sheet
+涵盖: system_command / change_directory / read_file / write_file / replace_file / read_sheet / py_exec
 """
 
 from __future__ import annotations
@@ -16,13 +16,14 @@ register_server(ServerRegistration(
     name='system',
     tool_definitions=TOOL_DEFINITIONS,
     handlers={
-        'finish': handler.finish,
         'system_command': handler.system_command,
         'change_directory': handler.change_directory,
-        'edit_file': handler.edit_file_tool,
+        'wait': handler.wait,
+        'write_file': handler.write_file_tool,
         'replace_file': handler.replace_file,
         'read_file': handler.read_file,
         'read_sheet': handler.read_sheet,
+        'py_exec': handler.py_exec,
     },
     condition=is_available,
 ))

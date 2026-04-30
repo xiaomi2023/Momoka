@@ -13,17 +13,15 @@ from typing import Any, Callable
 class ToolResult:
     """工具执行结果。
 
-    text:          返回给 model 的文字内容
-    file_contents: 本次读取的文件内容，格式 {file_key: content}
-    is_finish:     True 表示调用了 finish()，本轮终止
-    log_msg:       需要输出给用户的日志；None 表示不 log
-                   str                   → 单条，role 由 log_role 决定
-                   list[tuple[str,str]]  → 多条，每项为 (msg, role)
-    log_role:      单条 log 时的 role，默认 'TOOL'
+    text:     返回给 model 的文字内容
+    success:  工具是否执行成功（默认 True）
+    log_msg:  需要输出给用户的日志；None 表示不 log
+              str                   → 单条，role 由 log_role 决定
+              list[tuple[str,str]]  → 多条，每项为 (msg, role)
+    log_role: 单条 log 时的 role，默认 'TOOL'
     """
     text: str
-    file_contents: dict[str, str] = field(default_factory=dict)
-    is_finish: bool = False
+    success: bool = True
     log_msg: str | list[tuple[str, str]] | None = None
     log_role: str = 'TOOL'
 

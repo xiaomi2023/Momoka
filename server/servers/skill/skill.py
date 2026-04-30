@@ -59,7 +59,7 @@ def get_skill(args: dict, ctx: ToolContext) -> ToolResult:
     skill_path = os.path.join(skills_root, skill_name)
 
     if not os.path.isdir(skill_path):
-        return ToolResult(text=f'Can not find skill: {skill_name} (Path: {skill_path})')
+        return ToolResult(text=f'Can not find skill: {skill_name} (Path: {skill_path})', success=False)
 
     # ── Read single resource file ────────────────────────────────────────────
     if resource:
@@ -77,7 +77,8 @@ def get_skill(args: dict, ctx: ToolContext) -> ToolResult:
             return ToolResult(
                 text=(f'<Resource file not found: {resource}>\n'
                       f'Available resource files for skill {skill_name!r}:\n' +
-                      '\n'.join(f'  {f}' for f in sorted(available)))
+                      '\n'.join(f'  {f}' for f in sorted(available))),
+                success=False,
             )
         try:
             with open(target, 'r', encoding=encoding) as fh:
@@ -85,16 +86,15 @@ def get_skill(args: dict, ctx: ToolContext) -> ToolResult:
             log(f'get_skill | {skill_name}/{resource} ({len(content)} chars)')
             return ToolResult(
                 text=content,
-                file_contents={target: content},
                 log_msg=f'Read Skill: {skill_name}/{resource}',
             )
         except Exception as e:
-            return ToolResult(text=f'<Failed to read resource file: {e}>')
+            return ToolResult(text=f'<Failed to read resource file: {e}>', success=False)
 
     # ── Read SKILL.md + list available resources ─────────────────────────────
     skill_md = os.path.join(skill_path, 'SKILL.md')
     if not os.path.isfile(skill_md):
-        return ToolResult(text=f'<The skill directory exists, but SKILL.md is missing: {skill_path}>')
+        return ToolResult(text=f'<The skill directory exists, but SKILL.md is missing: {skill_path}>', success=False)
 
     try:
         with open(skill_md, 'r', encoding=encoding) as fh:
@@ -113,8 +113,8 @@ def get_skill(args: dict, ctx: ToolContext) -> ToolResult:
         log(f'get_skill | {skill_name}/SKILL.md ({len(content)} chars)')
         return ToolResult(
             text=content + suffix,
-            file_contents={skill_md: content},
             log_msg=f'Load Skill: {skill_name}',
         )
     except Exception as e:
-        return ToolResult(text=f'<Failed to read SKILL.md: {e}>')
+        return ToolResult(text=f'<Failed to read SKILL.md: {e}>', success=False)
+

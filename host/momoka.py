@@ -13,31 +13,22 @@ from logger import log
 from model.model import Model
 from server.router import execute_tool_calls
 from host.prompt_builder import build_system_prompt
+from host.skill_manager import SkillManager, SkillLoadResult
 from server.tool_registry import get_available_tools
 
 
 @dataclass
 class SendResult:
     """Return result from send() method."""
-    is_finish: bool          # Whether finish was called
-    file_contents: dict      # Files read in this round
     input_tokens: int        # Input token count
     output_tokens: int       # Output token count
     round_count: int         # Number of conversation rounds
-
-
-@dataclass
-class SkillLoadResult:
-    """Return result from load_skill() method."""
-    success: bool            # Whether loading succeeded
-    message: str             # Result message
+    is_finish: bool = True   # Whether the task has finished
 
 
 @dataclass
 class AgentLoopResult:
     """Agent loop execution result."""
-    is_finish: bool          # Whether finish was called
-    file_contents: dict      # Files read in this round
     input_tokens: int        # Input token count
     output_tokens: int       # Output token count
     round_count: int         # Number of conversation rounds
@@ -57,6 +48,7 @@ class Momoka:
         self._model = Model(name='Momoka', user=user)
         self._model.set_system(build_system_prompt())
         self._call_wrapper = call_wrapper or (lambda fn, *a, **kw: fn(*a, **kw))
+        self._skill_manager = SkillManager(self._model)
 
         # Load preset conversations
         self._load_preset_conversations()
@@ -66,8 +58,7 @@ class Momoka:
 
     # ── Public API (called by user layer) ──────────────────────────────────
 
-    def send(self, message: str,
-             file_contents: dict[str, str] | None = None) -> SendResult:
+    def send(self, message: str) -> SendResult:
         """Receive user message, start agent loop, return status when loop ends."""
         log(f'momoka.send | {message}')
         
@@ -78,7 +69,6 @@ class Momoka:
             self._model.message,
             message,
             role='user',
-            file_contents=file_contents,
             use_tools=True,
             available_tools=available_tools,
         )
@@ -88,12 +78,10 @@ class Momoka:
         round_count = 1
 
         loop_result = self._agent_loop(
-            response, file_contents or {}, input_tokens, output_tokens, round_count
+            response, input_tokens, output_tokens, round_count
         )
 
         return SendResult(
-            is_finish=loop_result.is_finish,
-            file_contents=loop_result.file_contents,
             input_tokens=loop_result.input_tokens,
             output_tokens=loop_result.output_tokens,
             round_count=loop_result.round_count,
@@ -101,24 +89,7 @@ class Momoka:
 
     def load_skill(self, skill_name: str) -> SkillLoadResult:
         """Load specified skill and inject into system prompt."""
-        from server.router import _execute_tool
-        from server.types import ToolContext
-        from config import get_config
-
-        cfg = get_config()
-        ctx = ToolContext(cfg=cfg, input_func=input)
-        result = _execute_tool('get_skill', {'skill_name': skill_name}, ctx)
-
-        # result is a ToolResult object
-        skill_text = result.text
-        has_file_contents = bool(result.file_contents)
-
-        if has_file_contents:
-            self._model.inject_skill(skill_name, skill_text)
-            log(f'momoka.load_skill | Injected: {skill_name}')
-            return SkillLoadResult(success=True, message=skill_text)
-        else:
-            return SkillLoadResult(success=False, message=skill_text)
+        return self._skill_manager.load_skill(skill_name)
 
     def initialize_project(self) -> bool:
         """Generate AGENTS.md file for the current project.
@@ -150,17 +121,13 @@ class Momoka:
 
         try:
             # 使用 Agent 循环处理生成任务
-            result = self.send(
-                init_prompt,
-                file_contents=self._user.session.file_contents if self._user else None
-            )
-
-            # 如果完成了，调用 finish_task 清理
-            if result.is_finish:
-                self.finish_task()
+            self.send(init_prompt)
 
             log('init | Generation completed')
-            return result.is_finish
+
+            # 清理 skills
+            self.finish_task()
+            return True
 
         except Exception as e:
             log(f'init | Error: {e}')
@@ -168,7 +135,7 @@ class Momoka:
 
     def finish_task(self):
         """Clear all injected skills after task completion."""
-        self._model.clear_skills()
+        self._skill_manager.clear_skills()
 
     def clear_context(self):
         """清空上下文，保留 system 消息（含预设对话）。"""
@@ -265,35 +232,25 @@ class Momoka:
 
     # ── Agent Loop ─────────────────────────────────────────────────────────
 
-    def _agent_loop(self, response: dict, file_contents: dict,
+    def _agent_loop(self, response: dict,
                     input_tokens: int, output_tokens: int,
                     round_count: int) -> AgentLoopResult:
-        """Execute tool call loop until finish or model returns plain text (waiting for user input)."""
+        """Execute tool call loop until model returns plain text (waiting for user input)."""
         while True:
             text_content: str = response['content']
             tool_calls: list = response['tool_calls']
+
             # ── Case A: Has tool calls ─────────────────────────────────
             if tool_calls:
                 if text_content:
                     if self._user:
                         self._user.user_log(text_content, role='BOT')
 
-                is_finish, file_contents = execute_tool_calls(self._model, tool_calls, user=self._user)
-                if is_finish:
-                    log('work DONE')
-                    return AgentLoopResult(
-                        is_finish=True,
-                        file_contents=file_contents,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                        round_count=round_count
-                    )
+                execute_tool_calls(self._model, tool_calls, user=self._user)
 
                 # Tool execution completed this round, check for pending interrupt requests
                 if self._check_interrupt():
                     return AgentLoopResult(
-                        is_finish=False,
-                        file_contents=file_contents,
                         input_tokens=input_tokens,
                         output_tokens=output_tokens,
                         round_count=round_count
@@ -317,8 +274,6 @@ class Momoka:
                 if self._user:
                     self._user.user_log(text_content, role='BOT')
             return AgentLoopResult(
-                is_finish=False,
-                file_contents=file_contents,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 round_count=round_count

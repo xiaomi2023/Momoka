@@ -7,10 +7,25 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _config_debug = os.path.join(_HERE, 'config_debug.json')
 _config_default = os.path.join(_HERE, 'config.json')
 CONFIG_FILE = _config_debug if os.path.exists(_config_debug) else _config_default
+"""当前生效的静态配置文件路径。可通过 set_config_file() 在运行时修改。"""
 
 _working_config_debug = os.path.join(_HERE, 'working_config_debug.json')
 _working_config_default = os.path.join(_HERE, 'working_config.json')
 WORKING_CONFIG_FILE = _working_config_debug if os.path.exists(_working_config_debug) else _working_config_default
+
+
+def set_config_file(path: str):
+    """设置自定义配置文件路径，覆盖默认的 config.json。
+
+    Args:
+        path: 自定义配置文件的路径（绝对或相对路径）。
+    
+    应在程序入口（main.py）解析命令行参数后、首次调用 get_config() 之前调用。
+    """
+    global CONFIG_FILE
+    CONFIG_FILE = os.path.abspath(path)
+    if not os.path.exists(CONFIG_FILE):
+        raise FileNotFoundError(f'Configuration file does not exist: {CONFIG_FILE}')
 
 
 # ── 静态配置（config.json）────────────────────────────────────────────────────
@@ -22,9 +37,9 @@ def get_config() -> dict:
     working = _get_working_config()
     # 运行时字段覆盖静态字段（如有同名）
     config.update(working)
-    # work_dir 不存在时使用程序当前目录保底
+    # work_dir 未指定或不存在时，以 main.py 运行地点为默认值
     if not config.get('work_dir') or not os.path.exists(config['work_dir']):
-        config['work_dir'] = _HERE
+        config['work_dir'] = _HERE  # _HERE = config.py 所在目录 = main.py 所在目录
     # 向后兼容：where 为空时回退到 work_dir
     if not config.get('where'):
         config['where'] = config['work_dir']

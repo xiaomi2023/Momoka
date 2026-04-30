@@ -1,8 +1,7 @@
 """
 model/context.py —— 对话历史与上下文管理。
 
-负责维护 history 列表、_meta 元数据、skill 注入/清除、
-历史修复（repair）和文件内容折叠（collapse）。
+负责维护 history 列表、skill 注入/清除、历史修复（repair）等。
 """
 
 from logger import log
@@ -14,15 +13,6 @@ class Context:
         self._injected_skills: dict[str, str] = {}
         self._preset_conv_count: int = 0  # 记录预设对话的数量
         self.history: list[dict] = [{'role': 'system', 'content': base_system}]
-        # 与 history 等长的元数据列表，记录每条消息携带的文件内容
-        self._meta: list[dict] = [{}]
-
-    # ── 公共属性 ─────────────────────────────────────────────────────
-
-    @property
-    def meta(self) -> list[dict]:
-        """元数据列表，与 history 等长，记录每条消息携带的文件内容等信息。"""
-        return self._meta
 
     # ── System Prompt ─────────────────────────────────────────────────────
 
@@ -56,7 +46,6 @@ class Context:
             self.history[0]['content'] = full_system
         else:
             self.history.insert(0, {'role': 'system', 'content': full_system})
-            self._meta.insert(0, {})
 
     # ── History 写入 ──────────────────────────────────────────────────────
 
@@ -75,14 +64,12 @@ class Context:
             role = conv.get('role')
             if role == 'user':
                 self.history.insert(insert_position, {'role': 'user', 'content': conv['content']})
-                self._meta.insert(insert_position, {'file_contents': {}})
                 insert_position += 1
             elif role == 'assistant':
                 assistant_msg = {'role': 'assistant', 'content': conv.get('content', '')}
                 if 'tool_calls' in conv:
                     assistant_msg['tool_calls'] = conv['tool_calls']
                 self.history.insert(insert_position, assistant_msg)
-                self._meta.insert(insert_position, {})
                 insert_position += 1
             else:
                 log(f'context.insert_preset_conversations | 跳过不支持的角色: {role}')
@@ -91,10 +78,9 @@ class Context:
         self._preset_conv_count = len(conversations)
         log(f'context.insert_preset_conversations | 插入 {len(conversations)} 条预设对话')
 
-    def append_user(self, message: str, file_contents: dict[str, str] | None = None):
+    def append_user(self, message: str):
         """追加一条 user 消息到历史。"""
         self.history.append({'role': 'user', 'content': message})
-        self._meta.append({'file_contents': file_contents or {}})
 
     def append_assistant(self, text_content: str, tool_calls: list):
         """追加一条 assistant 消息到历史。"""
@@ -109,24 +95,20 @@ class Context:
                 for tc in tool_calls
             ]
         self.history.append(assistant_msg)
-        self._meta.append({})
 
     def append_assistant_raw(self, assistant_msg: dict):
         """追加已序列化好的 assistant 消息（resume 路径使用）。"""
         self.history.append(assistant_msg)
-        self._meta.append({})
 
-    def add_tool_result(self, tool_call_id: str, result: str,
-                        file_contents: dict[str, str] | None = None):
+    def add_tool_result(self, tool_call_id: str, result: str):
         """追加工具执行结果到历史。"""
         self.history.append({
             'role': 'tool',
             'tool_call_id': tool_call_id,
             'content': result,
         })
-        self._meta.append({'file_contents': file_contents or {}})
 
-    # ── History 修复与折叠 ────────────────────────────────────────────────
+    # ── History 修复 ──────────────────────────────────────────────────────
 
     def repair_history(self) -> int:
         """检测并修复孤儿 tool_calls 消息（无对应 tool_result 的情况）。
@@ -148,17 +130,14 @@ class Context:
                 missing_ids = expected_ids - covered_ids
                 if missing_ids:
                     placeholder_msgs = []
-                    placeholder_metas = []
                     for tc_id in missing_ids:
                         placeholder_msgs.append({
                             'role': 'tool',
                             'tool_call_id': tc_id,
                             'content': '（已中断，工具未执行）',
                         })
-                        placeholder_metas.append({})
                         repaired += 1
                     self.history[i + 1:i + 1] = placeholder_msgs
-                    self._meta[i + 1:i + 1] = placeholder_metas
                     log(f'context.repair_history | 补全 {len(missing_ids)} 个孤儿 tool_result: {missing_ids}')
                     i = j + len(missing_ids)
                 else:
@@ -178,34 +157,5 @@ class Context:
         # 保存 system 消息和预设对话
         keep_count = 1 + self._preset_conv_count  # system + 预设对话
         self.history = self.history[:keep_count]
-        self._meta = self._meta[:keep_count]
         self._injected_skills.clear()
         log(f'context.clear_history | 已清空对话历史（保留 system 和 {self._preset_conv_count} 条预设对话）')
-
-    def collapse_file_in_history(self, filename: str) -> int:
-        """将历史中除最后一次之外、所有包含指定文件内容的消息折叠。
-
-        Returns:
-            折叠的消息条数。
-        """
-        placeholder = f'[Collapse file contents: {filename}]'
-        hits = [
-            i for i, m in enumerate(self._meta)
-            if filename in m.get('file_contents', {})
-        ]
-        if len(hits) <= 1:
-            return 0
-
-        collapsed_count = 0
-        for i in hits[:-1]:
-            content = self._meta[i]['file_contents'][filename]
-            original = self.history[i].get('content')
-            if original and isinstance(original, str):
-                new_content = original.replace(content, placeholder, 1)
-                if new_content != original:
-                    self.history[i]['content'] = new_content
-                    collapsed_count += 1
-                    log(f'context.collapse_file_in_history | 折叠历史[{i}]中的文件: {filename}')
-            del self._meta[i]['file_contents'][filename]
-
-        return collapsed_count

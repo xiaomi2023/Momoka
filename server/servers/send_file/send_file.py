@@ -25,7 +25,7 @@ def send_file(args: dict, ctx: ToolContext) -> ToolResult:
         if not os.path.exists(file_path):
             return ToolResult(
                 text=f'<File not found: {file_path}>\n'
-                     f'Consider using the absolute path of the file.',
+                     f'<Consider using the absolute path of the file>',
                 log_msg=log_label,
             )
 

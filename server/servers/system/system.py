@@ -1,12 +1,13 @@
 """
 server/servers/system/system.py —— 系统工具处理器。
 
-涵盖: finish / system_command / change_directory / find_file / edit_file / get_cwd / set_cwd_explicit
-         read_file / replace_file / read_sheet
+涵盖: system_command / change_directory / find_file / write_file / get_cwd / set_cwd_explicit
+         read_file / replace_file / read_sheet / py_exec
 """
 
 from __future__ import annotations
 
+import io
 import os
 import sys
 import threading
@@ -172,17 +173,13 @@ def find_file(filename: str, encoding: str = 'utf-8') -> str:
         return f.read()
 
 
-def edit_file(filename: str, text: str, encoding: str = 'utf-8'):
+def write_file(filename: str, text: str, encoding: str = 'utf-8'):
     """将 text 覆盖写入指定文件。"""
     with open(filename, 'w', encoding=encoding) as f:
         f.write(text)
 
 
 # ── 工具处理器函数 ─────────────────────────────────────────────────────────
-
-def finish(args: dict, ctx: ToolContext) -> ToolResult:
-    return ToolResult(text='FINISH', is_finish=True)
-
 
 def system_command(args: dict, ctx: ToolContext) -> ToolResult:
     command = args.get('command', '')
@@ -212,10 +209,10 @@ def change_directory(args: dict, ctx: ToolContext) -> ToolResult:
 
 
 
-# ── edit_file tool handler ────────────────────────────────────────────────
+# ── write_file tool handler ───────────────────────────────────────────────
 
-def edit_file_tool(args: dict, ctx: ToolContext) -> ToolResult:
-    """edit_file 工具处理器（覆盖写入文件）。"""
+def write_file_tool(args: dict, ctx: ToolContext) -> ToolResult:
+    """write_file 工具处理器（覆盖写入文件，自动创建父目录）。"""
     file_path = args.get('file_path', '')
     content = args.get('content', '')
     encoding = args.get('encoding') or ctx.cfg.get('encoding', 'utf-8')
@@ -224,14 +221,19 @@ def edit_file_tool(args: dict, ctx: ToolContext) -> ToolResult:
         if not os.path.isabs(file_path):
             file_path = os.path.join(_get_cwd(), file_path)
         
-        edit_file(file_path, content, encoding)
+        # 自动创建父目录（如果不存在）
+        parent_dir = os.path.dirname(file_path)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+        
+        write_file(file_path, content, encoding)
         write_lines = len(content.splitlines())
         return ToolResult(
             text=f'<Written File: {file_path}>',
             log_msg=f'Write File: {file_path} (+{write_lines})',
         )
     except Exception as e:
-        log(f'edit_file error | {file_path}\n{traceback.format_exc()}')
+        log(f'write_file error | {file_path}\n{traceback.format_exc()}')
         return ToolResult(
             text=f'<The following error occurred while editing the file: \n{type(e).__name__}: {e}\nConsider using the absolute path of the file>'
         )
@@ -253,7 +255,7 @@ def replace_file(args: dict, ctx: ToolContext) -> ToolResult:
         if old_text not in content:
             return ToolResult(text=f'<Replacement failed: The specified old text was not found in {file_path}>')
         new_content = content.replace(old_text, new_text, 1)
-        edit_file(file_path, new_content, encoding)
+        write_file(file_path, new_content, encoding)
         old_lines = len(old_text.splitlines())
         new_lines = len(new_text.splitlines())
         return ToolResult(
@@ -274,6 +276,8 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
     file_path = args.get('file_path', '')
     encoding = args.get('encoding') or ctx.cfg.get('encoding', 'utf-8')
     mode = args.get('mode', '')
+    start_line = args.get('start_line')
+    end_line = args.get('end_line')
     max_size_kb = ctx.cfg.get('read_max_size_kb', 100)
     max_lines = ctx.cfg.get('read_max_lines', 1000)
 
@@ -283,7 +287,12 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
         # 将相对路径转换为基于当前工作目录的绝对路径
         if not os.path.isabs(file_path):
             file_path = os.path.join(_get_cwd(), file_path)
-        
+
+        # ── doc 模式（支持行号范围） ──────────────────────────────────
+        if mode == 'doc':
+            return _read_file_doc(file_path, encoding, max_lines, log_label, start_line, end_line, ctx)
+
+        # ── 文件大小检查 ─────────────────────────────────────────────────
         max_size_bytes = max_size_kb * 1024
         file_size = os.path.getsize(file_path)
         if file_size > max_size_bytes:
@@ -295,28 +304,48 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
                 log_msg=log_label,
             )
 
-        # ── doc 模式 ─────────────────────────────────────────────────────
-        if mode == 'doc':
-            return _read_file_doc(file_path, encoding, max_lines, log_label, ctx)
-
         # ── 普通模式 ──────────────────────────────────────────────────────
         content = find_file(file_path, encoding)
-        line_count = len(content.splitlines())
-        if line_count > max_lines:
-            return ToolResult(
-                text=(f'<File too large: {file_path}({line_count} lines, current line limit: {max_lines}), '
-                      f'Consider using set_read_limits to increase the limits, '
-                      f'or use other methods to read the content>'),
-                log_msg=log_label,
-            )
+        all_lines = content.splitlines()
+        total_lines = len(all_lines)
+
+        # 应用行号范围过滤
+        if start_line is not None or end_line is not None:
+            # 确定实际的行号范围（1-based）
+            actual_start = start_line if start_line is not None else 1
+            actual_end = end_line if end_line is not None else total_lines
+
+            # 校验范围
+            if actual_start < 1 or actual_end > total_lines or actual_start > actual_end:
+                return ToolResult(
+                    text=(f'<Invalid line range: {actual_start}-{actual_end} '
+                          f'(file has {total_lines} lines, 1-based)>'),
+                    log_msg=log_label,
+                )
+
+            selected_lines = all_lines[actual_start - 1 : actual_end]
+            content = '\n'.join(selected_lines)
+            line_count = len(selected_lines)
+            range_info = f' ({actual_start}-{actual_end} of {total_lines})'
+        else:
+            line_count = total_lines
+            range_info = ''
+
+            if line_count > max_lines:
+                return ToolResult(
+                    text=(f'<File too large: {file_path}({line_count} lines, current line limit: {max_lines}), '
+                          f'Consider using set_read_limits to increase the limits, '
+                          f'or use other methods to read the content>'),
+                    log_msg=log_label,
+                )
+
         file_name = os.path.basename(file_path)
         return ToolResult(
-            text=f'<Opened File {file_name} in {file_path}>\n'
+            text=f'<Opened File {file_name} in {file_path}{range_info}>\n'
                  f'<{file_name}>\n'
                  f'{content}\n'
                  f'</{file_name}>',
-            file_contents={file_path: content},
-            log_msg=log_label,
+            log_msg=f'Read File: {file_name}{range_info}',
         )
 
     except Exception as e:
@@ -329,9 +358,25 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
 
 
 def _read_file_doc(file_path: str, encoding: str, max_lines: int,
-                   log_label: str, ctx: ToolContext) -> ToolResult:
+                   log_label: str, start_line: int | None,
+                   end_line: int | None, ctx: ToolContext) -> ToolResult:
     """read_file 的 doc 模式:调用 office 模块提取 Word 文档。"""
-    return read_docx(file_path, encoding, max_lines, log_label)
+    return read_docx(file_path, encoding, max_lines, log_label, start_line, end_line)
+
+
+# ── wait ──────────────────────────────────────────────────────────────────
+
+import time as _time
+
+
+def wait(args: dict, ctx: ToolContext) -> ToolResult:
+    """等待指定的秒数。"""
+    seconds = args.get('seconds', 0)
+    _time.sleep(seconds)
+    return ToolResult(
+        text=f'<Waited for {seconds} seconds>',
+        log_msg=f'Wait: {seconds}s',
+    )
 
 
 # ── read_sheet ────────────────────────────────────────────────────────────
@@ -355,3 +400,78 @@ def read_sheet(args: dict, ctx: ToolContext) -> ToolResult:
                  f'Consider using the absolute path of the file>',
             log_msg=log_label,
         )
+
+
+# ── py_exec: 执行 Python 代码段（带超时机制）───────────────────────────────
+
+def py_exec(args: dict, ctx: ToolContext) -> ToolResult:
+    """使用 exec() 执行一段 Python 代码并捕获其输出。
+
+    通过 threading.Thread + join(timeout) 实现超时机制，
+    超时时间取自配置的 wait 参数（与 system_command 一致）。
+    """
+    code = args.get('code', '')
+    cwd = _get_cwd()
+    timeout = ctx.cfg.get('wait', 10)
+
+    log(f'py_exec | cwd: {cwd} | timeout: {timeout}s | code:\n{code}')
+
+    # 用于在线程间传递结果的容器
+    result_container: dict = {
+        'output': '',
+        'error': '',
+        'done': False,
+    }
+
+    old_stdout = sys.stdout
+    captured = io.StringIO()
+
+    def _run():
+        """在子线程中执行代码。"""
+        nonlocal captured, old_stdout
+        sys.stdout = captured
+        try:
+            compiled = compile(code, '<py_exec>', 'exec')
+            exec(compiled, {'__builtins__': __builtins__})
+        except Exception as e:
+            result_container['error'] = f'{type(e).__name__}: {e}'
+            log(f'py_exec error: {result_container["error"]}\n{traceback.format_exc()}')
+        finally:
+            sys.stdout = old_stdout
+            result_container['output'] = captured.getvalue()
+            result_container['done'] = True
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    t.join(timeout=timeout)
+
+    # 检查是否超时
+    if not result_container['done']:
+        # 线程因超时仍在运行（daemon=True 会在主线程退出时自动终止）
+        log(f'py_exec timeout after {timeout}s | code:\n{code}')
+        # ！修复：超时后确保 sys.stdout 恢复为原始 stdout
+        # 因为子线程还没执行到 finally 块，sys.stdout 仍然指向 StringIO
+        sys.stdout = old_stdout
+        return ToolResult(
+            text=f'<Python execution timed out after {timeout} seconds>',
+            log_msg=f'Exec Code (timeout)',
+        )
+
+    output = result_container['output']
+    error_text = result_container['error']
+
+    # 构建返回文本
+    lines = []
+    if output:
+        lines.append(output.rstrip('\n'))
+    if error_text:
+        lines.append(f'<Error: {error_text}>')
+    if not output and not error_text:
+        lines.append('(Code executed successfully with no output)')
+
+    final_text = '\n'.join(lines)
+
+    return ToolResult(
+        text=final_text,
+        log_msg=f'Exec Code'
+    )

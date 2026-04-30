@@ -611,10 +611,7 @@ class LarkBotUser(BaseUser):
 
             # 调用 Agent
             try:
-                result = self._agent.send(
-                    user_message,
-                    file_contents=self.session.file_contents
-                )
+                result = self._agent.send(user_message)
 
                 self.session.update(result)
 
@@ -832,11 +829,8 @@ class LarkBotUser(BaseUser):
     def _fetch_models_for_model(self) -> list[str]:
         """为 /model 命令获取模型列表。"""
         try:
-            from openai import OpenAI
-            cfg = get_config()
-            client = OpenAI(api_key=cfg['api_key'], base_url=cfg['base_url'])
-            models = client.models.list()
-            return sorted(m.id for m in models.data)
+            from model.model import fetch_available_models
+            return fetch_available_models()
         except Exception as e:
             log(f'lark | failed to fetch models: {e}')
             return []

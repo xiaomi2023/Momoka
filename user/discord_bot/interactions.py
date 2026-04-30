@@ -81,11 +81,8 @@ class DiscordInteractionAdapter:
     def _fetch_models(self) -> list[str]:
         """从 API 拉取可用模型列表。"""
         try:
-            from openai import OpenAI
-            cfg = get_config()
-            client = OpenAI(api_key=cfg['api_key'], base_url=cfg['base_url'])
-            models = client.models.list()
-            return sorted(m.id for m in models.data)
+            from model.model import fetch_available_models
+            return fetch_available_models()
         except Exception:
             return []
 

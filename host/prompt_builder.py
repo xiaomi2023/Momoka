@@ -6,6 +6,7 @@ host/prompt_builder.py —— 系统提示词构建。
 
 import os
 import sys
+from datetime import datetime
 
 import config
 from config import get_config
@@ -24,6 +25,20 @@ def _read_prompt_file(filename: str) -> str:
         return ''
     except Exception:
         return ''
+
+
+def _get_agent_content(cfg: dict) -> str:
+    """检查 work_dir 下是否存在 AGENTS.md，存在则返回其内容，否则返回 '(NULL)'。"""
+    work_dir = cfg.get('work_dir', '')
+    if not work_dir:
+        return '(NULL)'
+    agent_path = os.path.join(work_dir, 'AGENTS.md')
+    try:
+        with open(agent_path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            return content if content else '(NULL)'
+    except (FileNotFoundError, IOError):
+        return '(NULL)'
 
 
 def build_system_prompt() -> str:
@@ -45,23 +60,31 @@ def build_system_prompt() -> str:
 
     skills = discover_skills(cfg)
     if skills:
-        skills_hint = '\nSkills:\n' + '\n'.join(
+        skills_hint = '\nAvailable Skills:\n' + '\n'.join(
             f'  - {s["name"]}: {s["description"]}' if s['description']
             else f'  - {s["name"]}'
             for s in skills
         )
     else:
-        skills_hint = ''
+        skills_hint = '(The Skills list is empty)'
 
     # 读取 system.md 文件作为基础 prompt
     system_prompt = _read_prompt_file('system.md')
 
+    # 获取 AGENTS.md 内容，替换 {AGENT} 占位符
+    agent_content = _get_agent_content(cfg)
+    system_prompt = system_prompt.replace('{AGENT}', agent_content)
+
+    # 获取当前时间
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     return (
-        f"{system_prompt}"
+        f"{system_prompt}\n\n"
+        f"### Other Information\n"
+        f"Current Time: {current_time}\n"
         f"Current location: {get_cwd()}\n"
         f"Working directory: {cfg['work_dir']}\n"
-        f"OS: {platform_hint}"
-        f"{platform_warning}"
+        f"OS: {platform_hint}\n"
+        f"{platform_warning}\n"
         f"{skills_hint}"
-        f"\n<user_prompt>\n" + (cfg['prompt'] if cfg.get('prompt') else "NULL") + "\n</user_prompt>"
     )

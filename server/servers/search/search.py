@@ -119,7 +119,7 @@ def glob(args: dict, ctx: ToolContext) -> ToolResult:
         # 支持 ** 递归匹配
         if '**' in pattern:
             # 递归搜索
-            files = list(search_path.rglob(pattern.replace('**/', '').replace('**\\', '')))
+            files = list(search_path.rglob(pattern.replace('**/', '').replace(f'**{os.sep}', '')))
         else:
             # 仅当前目录
             files = list(search_path.glob(pattern))
@@ -160,6 +160,44 @@ def _get_cwd() -> str:
     return cfg.get('where') or cfg['work_dir']
 
 
+# 默认排除的目录名称（不区分大小写）
+IGNORED_DIRS: set[str] = {
+    '.git', '.svn', '.hg',               # 版本控制
+    'node_modules', '.npm',              # Node.js
+    '__pycache__', '.pytest_cache',      # Python 缓存
+    '.venv', 'venv', 'env',              # Python 虚拟环境
+    '.idea', '.vscode',                  # IDE 配置
+    '.mypy_cache', '.ruff_cache',        # Python 工具缓存
+    'bower_components',                  # 前端包
+    'vendor',                            # PHP/Go vendor
+    '.next', '.nuxt',                    # 构建产物
+    'target',                            # Rust/Java 构建产物
+    'bin', 'obj',                        # .NET 构建产物
+}
+
+# 默认排除的文件扩展名（二进制/不可搜索格式）
+IGNORED_EXTENSIONS: set[str] = {
+    # 图片
+    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp', '.tiff',
+    # 字体
+    '.ttf', '.otf', '.woff', '.woff2', '.eot',
+    # 音视频
+    '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv', '.flv',
+    # 压缩包
+    '.zip', '.tar', '.gz', '.bz2', '.xz', '.7z', '.rar',
+    # 二进制/可执行
+    '.exe', '.dll', '.so', '.dylib', '.bin', '.obj', '.lib', '.pdb',
+    '.class', '.jar', '.war', '.pyc', '.pyo', '.pyd',
+    '.o', '.a', '.lo', '.la',
+    # 数据库
+    '.db', '.sqlite', '.sqlite3',
+    # 文档二进制格式（应由专门工具查看）
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+    # 其他
+    '.iso', '.img', '.lock', '.map', '.min.js', '.min.css',
+}
+
+
 def _get_files(search_path: str, file_glob: str | None) -> list[str]:
     """获取要搜索的文件列表。"""
     search_path = Path(search_path)
@@ -174,14 +212,37 @@ def _get_files(search_path: str, file_glob: str | None) -> list[str]:
     if file_glob:
         # 使用 glob 模式过滤
         if '**' in file_glob:
-            files = [str(f) for f in search_path.rglob(file_glob.replace('**/', '').replace('**\\', ''))]
+            files = [str(f) for f in search_path.rglob(file_glob.replace('**/', '').replace(f'**{os.sep}', ''))]
         else:
             files = [str(f) for f in search_path.glob(file_glob)]
     else:
-        # 递归获取所有文件
-        files = [str(f) for f in search_path.rglob('*') if f.is_file()]
+        # 递归获取所有文件，但跳过被忽略的目录和二进制文件扩展名
+        for f in search_path.rglob('*'):
+            if not f.is_file():
+                continue
+            # 检查是否在忽略的目录中
+            if _is_in_ignored_dir(f, search_path):
+                continue
+            # 检查是否是被忽略的扩展名
+            if f.suffix.lower() in IGNORED_EXTENSIONS:
+                continue
+            files.append(str(f))
 
     return files
+
+
+def _is_in_ignored_dir(file_path: Path, root: Path) -> bool:
+    """检查文件是否位于被忽略的目录中。"""
+    try:
+        # 获取文件相对于根目录的路径部分
+        rel = file_path.relative_to(root)
+        # 检查路径的每个部分是否在忽略列表中
+        for part in rel.parts:
+            if part.lower() in IGNORED_DIRS:
+                return True
+    except ValueError:
+        pass
+    return False
 
 
 def _search_file(file_path: str, regex: re.Pattern) -> list[tuple[int, str]]:

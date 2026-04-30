@@ -2,14 +2,17 @@
 user/cli/util.py —— 终端交互工具函数。
 
 包含多行输入、slash 命令处理等与主循环交互相关的工具函数。
+多行输入使用 prompt_toolkit 实现：
+- Unix/Linux/Mac: Shift+Enter 换行，Enter 提交
+- Windows: Ctrl+J 换行，Enter 提交（因为 Windows 终端对 Shift+Enter 支持不佳）
 """
 
 import json
 import re
+import sys
 import time
 
 from config import get_config
-
 
 from rich.text import Text
 
@@ -59,19 +62,102 @@ def _infer_type(s: str) -> bool | int | float | str:
     return s
 
 
-def multiline_input(prompt: str) -> str:
-    """支持行尾 \\ 续行的多行输入。"""
+def _multiline_input_fallback(prompt: str) -> str:
+    """降级方案：使用基础 input()，以 \\ 结尾表示换行继续输入。
+
+    当 prompt_toolkit 不可用时（如在不支持的终端环境）使用此方案。
+    以 \\ 结尾表示该行输入还未结束，下一行将继续追加（中间保留换行符）。
+    """
     lines = []
-    first = True
     while True:
-        line = input(prompt if first else '... ')
-        first = False
+        try:
+            line = input(prompt)
+        except (EOFError, KeyboardInterrupt):
+            return ''
         if line.endswith('\\'):
             lines.append(line[:-1])
+            prompt = '... '  # 续行提示符
         else:
             lines.append(line)
             break
-    return '\n'.join(lines)
+    return '\n'.join(lines).strip()
+
+
+def multiline_input(prompt: str) -> str:
+    """使用 prompt_toolkit 实现多行输入，跨平台兼容。
+
+    - Enter 提交输入
+    - Unix/Linux/Mac: Shift+Enter 换行
+    - Windows: Ctrl+J 换行（因为 Windows 终端对 Shift+Enter 支持不佳）
+
+    自动配备语法历史记录，超长输入会自动换行显示。
+
+    当 prompt_toolkit 不可用时（如在不支持的终端环境），自动降级为
+    使用基础 input()，以 \\ 结尾表示换行。
+    """
+    # 尝试使用 prompt_toolkit，失败则降级
+    try:
+        from prompt_toolkit import PromptSession
+        from prompt_toolkit.history import InMemoryHistory
+        from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
+    except ImportError:
+        return _multiline_input_fallback(prompt)
+
+    # 每个会话共用一份历史记录，否则每次输入都是新的空历史
+    if not hasattr(multiline_input, '_session'):
+        try:
+            bindings = KeyBindings()
+
+            @bindings.add('enter')
+            def _accept(event: KeyPressEvent) -> None:
+                """Enter → 提交当前输入。"""
+                buf = event.current_buffer
+                if buf.text:
+                    buf.validate_and_handle()
+
+            # 根据平台选择换行键绑定
+            if sys.platform == 'win32':
+                # Windows: 使用 Ctrl+J 换行
+                @bindings.add('c-j')
+                def _newline_windows(event: KeyPressEvent) -> None:
+                    """Ctrl+J → 插入换行（Windows）。"""
+                    event.current_buffer.insert_text('\n')
+            else:
+                # Unix/Linux/Mac: 使用 Shift+Enter 换行
+                # 新版 prompt_toolkit 使用 's-return'，旧版使用 's-enter'
+                try:
+                    @bindings.add('s-return')
+                    def _newline_unix(event: KeyPressEvent) -> None:
+                        """Shift+Enter → 插入换行（Unix/Linux/Mac）。"""
+                        event.current_buffer.insert_text('\n')
+                except ValueError:
+                    # 兼容旧版 prompt_toolkit
+                    try:
+                        @bindings.add('s-enter')
+                        def _newline_unix_legacy(event: KeyPressEvent) -> None:
+                            """Shift+Enter → 插入换行（Unix/Linux/Mac，旧版兼容）。"""
+                            event.current_buffer.insert_text('\n')
+                    except ValueError:
+                        # 如果都不支持，降级使用 Alt+Enter
+                        @bindings.add('escape', 'enter')
+                        def _newline_fallback(event: KeyPressEvent) -> None:
+                            """Alt+Enter → 插入换行（降级方案）。"""
+                            event.current_buffer.insert_text('\n')
+
+            multiline_input._session = PromptSession(
+                history=InMemoryHistory(),
+                key_bindings=bindings,
+                multiline=False,  # 由我们自己的按键绑定控制换行/提交
+                prompt_continuation='... ',
+            )
+        except Exception:
+            # prompt_toolkit 初始化失败（如 NoConsoleScreenBufferError），降级
+            return _multiline_input_fallback(prompt)
+
+    try:
+        return multiline_input._session.prompt(prompt).strip()
+    except (EOFError, KeyboardInterrupt):
+        return ''
 
 
 def fetch_available_models(console=None) -> list[str]:
@@ -80,31 +166,26 @@ def fetch_available_models(console=None) -> list[str]:
     失败时返回空列表并打印错误信息。
     如果提供 console 参数，则使用 rich 进度条显示加载状态。
     """
-    try:
-        from openai import OpenAI
-        cfg = get_config()
-        client = OpenAI(api_key=cfg['api_key'], base_url=cfg['base_url'])
-        
-        if console is not None:
-            from rich.progress import Progress, SpinnerColumn, TextColumn
-            with Progress(
+    from model.model import fetch_available_models as _fetch
+
+    if console is not None:
+        from rich.progress import Progress, SpinnerColumn, TextColumn
+        with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
                 transient=True,
-            ) as progress:
-                task = progress.add_task("Fetching available models...", total=None)
-                models = client.models.list()
-                progress.stop()
-        else:
-            models = client.models.list()
-        
-        ids = sorted(m.id for m in models.data)
+        ) as progress:
+            task = progress.add_task("Fetching available models...", total=None)
+            ids = _fetch()
+            progress.stop()
+            return ids
+    else:
+        ids = _fetch()
+        if not ids:
+            from rich.console import Console
+            Console().print('[bright_red]Failed to fetch models[/bright_red]')
         return ids
-    except Exception as e:
-        from rich.console import Console
-        Console().print(f'[bright_red]Failed to fetch models: {e}[/bright_red]')
-        return []
 
 
 def select_model_interactive(models: list[str], current: str) -> tuple[str | None, int]:
@@ -114,8 +195,6 @@ def select_model_interactive(models: list[str], current: str) -> tuple[str | Non
         (选中的 model id, 列表行数)；用户按 ESC/q 取消时返回 (None, 列表行数)。
         列表行数用于后续清屏。
     """
-    import sys
-
     if not models:
         return None, 0
 
@@ -150,7 +229,7 @@ def select_model_interactive(models: list[str], current: str) -> tuple[str | Non
         result = _select_model_windows(models, current, idx, _print_list, _render)
     else:
         result = _select_model_unix(models, current, idx, _print_list, _render)
-    
+
     return result, list_lines
 
 
@@ -160,23 +239,22 @@ def _select_model_windows(models, current, idx, print_list_fn, render_fn):
     print_list_fn(idx)
     while True:
         key = msvcrt.getch()
-        if key in (b'\x00', b'\xe0'):          # 特殊键前缀
+        if key in (b'\x00', b'\xe0'):  # 特殊键前缀
             key2 = msvcrt.getch()
-            if key2 == b'H':                   # 上
+            if key2 == b'H':  # 上
                 idx = (idx - 1) % len(models)
                 render_fn(idx)
-            elif key2 == b'P':                 # 下
+            elif key2 == b'P':  # 下
                 idx = (idx + 1) % len(models)
                 render_fn(idx)
-        elif key == b'\r':                     # Enter
+        elif key == b'\r':  # Enter
             return models[idx]
-        elif key in (b'\x1b', b'q', b'Q'):    # ESC / q
+        elif key in (b'\x1b', b'q', b'Q'):  # ESC / q
             return None
 
 
 def _select_model_unix(models, current, idx, print_list_fn, render_fn):
     """Unix 平台：用 termios + tty 原始模式读取方向键。"""
-    import sys
     import termios
     import tty
 
@@ -191,16 +269,16 @@ def _select_model_unix(models, current, idx, print_list_fn, render_fn):
                 ch2 = sys.stdin.read(1)
                 if ch2 == '[':
                     ch3 = sys.stdin.read(1)
-                    if ch3 == 'A':             # ↑
+                    if ch3 == 'A':  # ↑
                         idx = (idx - 1) % len(models)
                         render_fn(idx)
-                    elif ch3 == 'B':           # ↓
+                    elif ch3 == 'B':  # ↓
                         idx = (idx + 1) % len(models)
                         render_fn(idx)
                 else:
                     # 裸 ESC
                     return None
-            elif ch in ('\r', '\n'):           # Enter
+            elif ch in ('\r', '\n'):  # Enter
                 return models[idx]
             elif ch in ('q', 'Q'):
                 return None
@@ -226,7 +304,7 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
         time_str = f'{mins}min {secs}s' if mins else f'{secs}s'
         from rich.console import Console
         Console().print(f'[bright_cyan]Usage: Input {input_tokens} tokens | Output {output_tokens} tokens | '
-              f'{round_count}R | Time taken {time_str}[/bright_cyan]')
+                        f'{round_count}R | Time taken {time_str}[/bright_cyan]')
         return True, None
 
     if cmd == '/clear':
@@ -277,7 +355,6 @@ def handle_slash(cmd: str, input_tokens: int, output_tokens: int,
   model      — Model name to use (e.g., gpt-4o)
   work_dir   — Default working directory path
   encoding   — File encoding (default: utf-8)
-  fold       — Fold history file content in output (true/false)
   mute_log   — List of roles to mute in logs (e.g., ["SHELL", "BROWSER"])
   prompt     — Additional system prompt text
 
@@ -330,7 +407,6 @@ Usage: /set <key> <value>[/bright_cyan]"""
 
 def _handle_model_command() -> None:
     """执行 /model 命令的完整流程：拉取列表 → 交互选择 → 写入配置。"""
-    import sys
     from rich.console import Console
 
     # 非 TTY 环境（如管道）降级为纯文本输入
@@ -389,7 +465,6 @@ def _handle_model_fallback() -> None:
     cfg = get_config()
     current = cfg.get('model', '')
 
-    from rich.console import Console
     Console().print('[bright_cyan]\nModels:[/bright_cyan]')
     for i, m in enumerate(models):
         active = ' [current]' if m == current else ''
@@ -398,12 +473,10 @@ def _handle_model_fallback() -> None:
     try:
         raw = input(f'Enter number (1-{len(models)}) or leave blank to cancel: ').strip()
     except (EOFError, KeyboardInterrupt):
-        from rich.console import Console
         Console().print('[bright_cyan]\nCancelled.[/bright_cyan]')
         return
 
     if not raw:
-        from rich.console import Console
         Console().print('[bright_cyan]Cancelled.[/bright_cyan]')
         return
 
@@ -412,13 +485,11 @@ def _handle_model_fallback() -> None:
         if not (1 <= n <= len(models)):
             raise ValueError
     except ValueError:
-        from rich.console import Console
         Console().print(f'[bright_red]Invalid input: {raw!r}[/bright_red]')
         return
 
     chosen = models[n - 1]
     if chosen == current:
-        from rich.console import Console
         Console().print(f'[bright_cyan]Model unchanged: {chosen}[/bright_cyan]')
         return
 
@@ -429,8 +500,6 @@ def _handle_model_fallback() -> None:
         raw_cfg['model'] = chosen
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(raw_cfg, f, ensure_ascii=False, indent=2)
-        from rich.console import Console
         Console().print(f'[bright_cyan]Model updated: {current!r} → {chosen!r}[/bright_cyan]')
     except Exception as e:
-        from rich.console import Console
         Console().print(f'[bright_red]Failed to save model: {e}[/bright_red]')

@@ -1,7 +1,7 @@
 """
 server/servers/system/tooldef.py — System tool definitions.
 
-Covers: system_command / change_directory / finish / read_file / edit_file / replace_file / read_sheet
+Covers: system_command / change_directory / read_file / write_file / replace_file / read_sheet / wait / py_exec
 """
 
 from __future__ import annotations
@@ -47,24 +47,30 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         'type': 'function',
         'function': {
-            'name': 'finish',
-            'description': 'End the task and deliver the result to the user.',
+            'name': 'wait',
+            'description': 'Wait for a specified number of seconds before continuing.',
             'parameters': {
                 'type': 'object',
-                'properties': {},
-                'required': [],
+                'properties': {
+                    'seconds': {
+                        'type': 'number',
+                        'description': 'Number of seconds to wait (supports decimals)',
+                    },
+                },
+                'required': ['seconds'],
             },
         },
     },
     {
         'type': 'function',
         'function': {
-            'name': 'edit_file',
-            'description': 'Overwrite the specified file with new content (creates the file if it does not exist).',
+            'name': 'write_file',
+            'description': 'Overwrite the specified file with new content (creates the file if it does not exist, '
+            'and automatically creates parent directories if they do not exist). \n',
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'file_path': {'type': 'string', 'description': 'Absolute path of the file (including extension)'},
+                    'file_path': {'type': 'string', 'description': 'Path of the file (including extension)'},
                     'content': {'type': 'string', 'description': 'Content to write to the file'},
                     'encoding': {'type': 'string', 'description': 'File encoding', 'default': get_config()['encoding']},
                 },
@@ -76,11 +82,12 @@ TOOL_DEFINITIONS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'replace_file',
-            'description': 'Replace part of the content in a file.',
+            'description': 'Replace part of the content in a file.\n'
+            'If you only need to modify a portion of a file, give priority to use this tool to reduce the size of the context window.',
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'file_path': {'type': 'string', 'description': 'Absolute path of the file (including extension)'},
+                    'file_path': {'type': 'string', 'description': 'Path of the file (including extension)'},
                     'old_text': {'type': 'string', 'description': 'The original text to be replaced'},
                     'new_text': {'type': 'string', 'description': 'The new text to replace with'},
                     'encoding': {'type': 'string', 'description': 'File encoding', 'default': get_config()['encoding']},
@@ -97,13 +104,21 @@ TOOL_DEFINITIONS: list[dict] = [
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'file_path': {'type': 'string', 'description': 'Absolute path of the file (including extension)'},
+                    'file_path': {'type': 'string', 'description': 'Path of the file (including extension)'},
                     'encoding': {'type': 'string', 'description': 'File encoding', 'default': get_config()['encoding']},
                     'mode': {
                         'type': 'string',
                         'enum': ['doc'],
-                        'description': "Optional. 'doc': Read .docx file content in Markdown format."
+                        'description': "Optional. 'doc': Read .docx file content in Markdown format. This may not work for other file types."
                                        "If you already have Skills for processing doc documents, use Skills first.",
+                    },
+                    'start_line': {
+                        'type': 'integer',
+                        'description': 'Optional. The starting line number (1-based) to read from.',
+                    },
+                    'end_line': {
+                        'type': 'integer',
+                        'description': 'Optional. The ending line number (1-based, inclusive) to read up to.',
                     },
                 },
                 'required': ['file_path'],
@@ -122,7 +137,7 @@ TOOL_DEFINITIONS: list[dict] = [
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'file_path': {'type': 'string', 'description': 'Absolute path of the Sheet file (including extension)'},
+                    'file_path': {'type': 'string', 'description': 'Path of the Sheet file (including extension)'},
                     'sheet_name': {
                         'type': 'string',
                         'description': 'Optional. The name of the Sheet to read.',
@@ -139,6 +154,24 @@ TOOL_DEFINITIONS: list[dict] = [
                     },
                 },
                 'required': ['file_path'],
+            },
+        },
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'py_exec',
+            'description': 'Execute a Python code snippet.\n'
+                           'The code will run in an unknown location, so do not use this tool to read or modify files.',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'code': {
+                        'type': 'string',
+                        'description': 'The Python code to execute.',
+                    },
+                },
+                'required': ['code'],
             },
         },
     },

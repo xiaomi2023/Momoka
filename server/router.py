@@ -5,7 +5,6 @@ server/router.py —— 工具调用调度路由。
   1. 将 tool_calls 分发到对应 handler
   2. 统一处理 user_log（handler 只填写 ToolResult.log_msg，不直接调用 user）
   3. 将结果写回 model 历史
-  4. 管理文件折叠与 finish 后的全量折叠
 
 路由机制：
   - 优先使用自动注册的 Server 模块（通过 server.servers.dispatch_tool）
@@ -73,7 +72,7 @@ def execute_tool_calls(
         tool_calls: list,
         user=None,
         input_func=input,
-) -> tuple[bool, dict[str, str]]:
+) -> None:
     """依次执行 tool_calls，将结果写回 model 历史。
 
     Args:
@@ -81,17 +80,9 @@ def execute_tool_calls(
         tool_calls: 工具调用列表
         user: 用户交互对象
         input_func: 输入函数
-        
-    Returns:
-        (is_finish, all_file_contents)
-        - is_finish: 是否调用了 finish 工具
-        - all_file_contents: 所有文件内容字典
     """
     cfg = get_config()
     ctx = ToolContext(cfg=cfg, input_func=input_func, user=user)
-
-    all_file_contents: dict[str, str] = {}
-    is_finish = False
 
     for tc in tool_calls:
         name = tc.function.name
@@ -105,35 +96,4 @@ def execute_tool_calls(
         _emit_logs(result, user)
 
         log(f'execute_tool_calls | {name}({args}) → {result.text}')
-        work_model.add_tool_result(
-            tc.id, result.text,
-            file_contents=result.file_contents if result.file_contents else None,
-        )
-
-        if result.file_contents:
-            all_file_contents.update(result.file_contents)
-            for file_key in result.file_contents:
-                collapsed = work_model.collapse_file_in_history(file_key)
-                if collapsed:
-                    log(f'execute_tool_calls | 折叠历史 [{name}]: {file_key} ({collapsed} 条)')
-
-        if result.is_finish:
-            is_finish = True
-            break
-
-    if is_finish:
-        _collapse_all_files(work_model)
-
-    return is_finish, all_file_contents
-
-
-def _collapse_all_files(work_model) -> None:
-    """折叠历史中所有已打开的文件和浏览器网页内容。"""
-    all_file_keys = set()
-    for meta in work_model.meta:
-        if 'file_contents' in meta:
-            all_file_keys.update(meta['file_contents'].keys())
-    for file_key in all_file_keys:
-        collapsed = work_model.collapse_file_in_history(file_key)
-        if collapsed:
-            log(f'_collapse_all_files | 折叠: {file_key} ({collapsed} 条)')
+        work_model.add_tool_result(tc.id, result.text)

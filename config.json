@@ -4,11 +4,9 @@
   "base_url": "https://api.XXX.com",
   "model": "XXX",
   "encoding": "utf-8",
-  "fold": true,
   "mute_log": [],
   "language": null,
-  "prompt": null,
-
+  "memory": false,
   "interface": "cli",
 
   "lark": {

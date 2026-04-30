@@ -139,10 +139,7 @@ class HeadlessUser(BaseUser):
                         continue
 
                 # 普通用户消息，交给 agent 处理
-                result = self._agent.send(
-                    content,
-                    file_contents=self.session.file_contents
-                )
+                result = self._agent.send(content)
 
                 self.session.update(result)
 

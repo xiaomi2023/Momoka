@@ -2,7 +2,7 @@
 server/servers/browser/browser.py —— 浏览器工具处理器。
 
 所有 browse_* 工具统一由 dispatch() 入口分发，
-browse_read 的历史去重逻辑在此处处理（需要 work_model，由 router 传入）。
+browse_read 的历史去重逻辑在 _read() 中通过 _browse_read_cache 实现。
 
 基于 Playwright 的浏览器操作模块（无障碍树版）。
 
@@ -65,6 +65,13 @@ from server.servers.browser.accessibility import (
     _resolve_element,
     _refresh_item_map,
 )
+
+
+# ── 页面内容缓存（用于 browse_read 历史去重） ─────────────────────────
+
+_browse_read_cache: dict[str, str] = {}
+"""缓存每个 URL 上次读取的页面内容，key 为当前页面 URL，value 为完整读取结果。
+   若下次读取同一 URL 且内容未变化，则返回精简提示以节省 token。"""
 
 
 # ── 核心操作函数 ─────────────────────────────────────────────────────────
@@ -704,30 +711,22 @@ def _read(args: dict, ctx: ToolContext, work_model=None) -> ToolResult:
 
     result = browser_read(char_start, char_end, mode)
 
-    # 构造文件键
+    # 历史去重：与上一次同一 URL 的内容对比，未变化则精简提示
     try:
         current_url = get_page().url if get_page() and not get_page().is_closed() else None
     except Exception:
         current_url = None
-    file_key = f'browse_read:{current_url}' if current_url else None
 
-    # 历史去重：与上一次内容对比，未变化则精简提示
-    if work_model and file_key:
-        prev = next(
-            (m['file_contents'][file_key]
-             for m in reversed(work_model.meta)
-             if file_key in m.get('file_contents', {})),
-            None,
-        )
+    if current_url:
+        prev = _browse_read_cache.get(current_url)
         if prev is not None and prev == result:
-            url = file_key.removeprefix('browse_read:')
-            result = f'<Page content unchanged. URL: {url}>'
-            log(f'browse_read | Content unchanged: {url}')
+            result = f'<Page content unchanged. URL: {current_url}>'
+            log(f'browse_read | Content unchanged: {current_url}')
+        else:
+            _browse_read_cache[current_url] = result
 
-    file_contents = {file_key: result} if file_key else {}
     return ToolResult(
         text=result,
-        file_contents=file_contents,
         log_msg=f'Reading Page ({mode})',
         log_role='BROWSER',
     )
