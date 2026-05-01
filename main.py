@@ -58,7 +58,7 @@ logging.getLogger('httpcore').setLevel(logging.WARNING)
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Momoka - AI Agent with multiple interfaces',
+        description='Momoka - An personal AI assistant',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
