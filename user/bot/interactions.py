@@ -1,8 +1,8 @@
 """
-user/qq_bot/interactions.py —— QQ Bot 交互适配器。
+user/bot/interactions.py —— Bot 交互适配器公共基类。
 
-实现 SlashCommandCallbacks、AskUserCallbacks、TodoListCallbacks、SelectorCallbacks 接口,
-将纯业务逻辑层的输出适配为 QQ Bot 格式。
+为所有 Bot 平台（Lark、Discord、QQ）提供交互适配器的基础实现。
+各平台只需实现 send_message 回调即可。
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from config import get_config, get_working_config, CONFIG_FILE
 from user.commands import SlashCommandCallbacks
@@ -18,16 +18,24 @@ from user.interactions import AskUserCallbacks, TodoListCallbacks
 from user.selector import OptionSelector
 
 if TYPE_CHECKING:
-    from .qq_bot import QQBotUser
+    from user.bot.base import BotBaseUser
 
 
-class QQInteractionAdapter:
-    """QQ Bot 交互适配器,实现 SlashCommandCallbacks 接口。"""
+class BotInteractionAdapterBase:
+    """Bot 交互适配器基类。
 
-    def __init__(self, bot: QQBotUser):
+    实现 SlashCommandCallbacks 接口，各平台只需提供 _send_message 方法。
+    """
+
+    def __init__(self, bot: BotBaseUser):
         self._bot = bot
 
-    def create_callbacks(self) -> SlashCommandCallbacks:
+    def _send_message(self, text: str) -> None:
+        """发送消息。子类需实现或通过构造函数注入。"""
+        if self._bot._active_chat_id:
+            self._bot._send_platform_message(self._bot._active_chat_id, text)
+
+    def create_slash_callbacks(self) -> SlashCommandCallbacks:
         """创建并返回 SlashCommandCallbacks 实例。"""
         return SlashCommandCallbacks(
             send_message=self._send_message,
@@ -42,13 +50,7 @@ class QQInteractionAdapter:
             reset_session=self._reset_session,
         )
 
-    def _send_message(self, text: str) -> None:
-        """发送消息到 QQ。"""
-        if self._bot._active_chat_id is not None:
-            self._bot._send_qq_message_sync(self._bot._active_chat_id, text)
-
     def _get_session_data(self) -> dict:
-        """获取 session 数据。"""
         return {
             'input_tokens': self._bot.session.input_tokens,
             'output_tokens': self._bot.session.output_tokens,
@@ -57,30 +59,23 @@ class QQInteractionAdapter:
         }
 
     def _get_config(self) -> dict:
-        """获取静态配置。"""
         return get_config()
 
     def _get_working_config(self) -> dict:
-        """获取运行时配置。"""
         return get_working_config()
 
     def _update_config(self, key: str, value: object) -> bool:
-        """更新配置项。"""
         try:
             with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                 cfg = json.load(f)
-
             cfg[key] = value
-
             with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump(cfg, f, ensure_ascii=False, indent=2)
-
             return True
         except Exception:
             return False
 
     def _fetch_models(self) -> list[str]:
-        """从 API 拉取可用模型列表。"""
         try:
             from model.model import fetch_available_models
             return fetch_available_models()
@@ -88,7 +83,6 @@ class QQInteractionAdapter:
             return []
 
     def _initialize_project(self) -> bool:
-        """初始化项目,生成 AGENTS.md。"""
         if self._bot._agent is None:
             return False
         try:
@@ -97,7 +91,6 @@ class QQInteractionAdapter:
             return False
 
     def _load_skill(self, skill_name: str) -> object:
-        """加载指定 Skill。"""
         if self._bot._agent is None:
             class FailResult:
                 success = False
@@ -105,96 +98,64 @@ class QQInteractionAdapter:
         return self._bot._agent.load_skill(skill_name)
 
     def _clear_context(self) -> None:
-        """清空对话上下文。"""
         if self._bot._agent is not None:
             self._bot._agent.clear_context()
 
     def _reset_session(self) -> None:
-        """重置会话状态。"""
         self._bot.session.reset()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# AskUser 适配器 - 用于 ask_user 工具
-# ─────────────────────────────────────────────────────────────────────────────
+class BotAskUserAdapter:
+    """Bot AskUser 适配器基类。"""
 
-class QQAskUserAdapter:
-    """QQ Bot AskUser 适配器，实现 AskUserCallbacks 接口。"""
-
-    def __init__(self, bot: QQBotUser):
+    def __init__(self, bot: BotBaseUser):
         self._bot = bot
 
     def make_callbacks(self) -> AskUserCallbacks:
-        """构建 AskUser 的 QQ 回调。"""
         return AskUserCallbacks(
             render_question=self._render_question,
             get_input=self._get_input,
         )
 
     def _render_question(self, question: str) -> None:
-        """渲染问题到 QQ。"""
         if self._bot._active_chat_id and question:
-            self._bot._send_qq_message_sync(
-                self._bot._active_chat_id,
-                f"[QUESTION]\n{question}"
-            )
+            self._bot._send_platform_message(self._bot._active_chat_id, f"[QUESTION]\n{question}")
 
     def _get_input(self, prompt: str) -> str:
-        """从 QQ 获取用户输入。"""
         return self._wait_for_response()
 
     def _wait_for_response(self) -> str:
-        """等待用户回复。"""
-        import asyncio as aio
-
+        """等待用户回复。子类可覆盖以实现不同的队列读取逻辑。"""
         original_chat_id = self._bot._active_chat_id
-
-        # 轮询等待消息
-        max_wait = 600  # 最多等待 10 分钟
+        max_wait = 600
         waited = 0
         while waited < max_wait:
-            # 检查队列中是否有新消息
-            queue = self._bot._message_queues.get(original_chat_id)
-            if queue and not queue.empty():
-                try:
-                    msg = queue.get_nowait()
-                    return msg['content']
-                except aio.QueueEmpty:
-                    pass
+            msg = self._bot._get_platform_message(original_chat_id)
+            if msg is not None:
+                return msg
             time.sleep(0.1)
             waited += 0.1
-
         return '(TIMEOUT)'
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TodoList 适配器 - 用于 set_todolist 工具
-# ─────────────────────────────────────────────────────────────────────────────
+class BotTodoListAdapter:
+    """Bot TodoList 适配器基类。"""
 
-class QQTodolistAdapter:
-    """QQ Bot TodoList 适配器，实现 TodoListCallbacks 接口。"""
-
-    def __init__(self, bot: QQBotUser):
+    def __init__(self, bot: BotBaseUser):
         self._bot = bot
 
     def make_callbacks(self) -> TodoListCallbacks:
-        """构建 TodoList 的 QQ 回调。"""
         return TodoListCallbacks(
             render_tasks=self._render_tasks,
         )
 
     def _render_tasks(self, tasks: list[dict]) -> str:
-        """渲染任务列表到 QQ，返回纯文本版本（用于日志）。"""
         if not tasks:
             text = '(EMPTY)'
             if self._bot._active_chat_id:
-                self._bot._send_qq_message_sync(
-                    self._bot._active_chat_id,
-                    text
-                )
+                self._bot._send_platform_message(self._bot._active_chat_id, text)
             return text
 
-        # 生成文本行
         lines = ['TODO:']
         for i, task in enumerate(tasks, 1):
             status = task.get('status', 'pending')
@@ -207,36 +168,21 @@ class QQTodolistAdapter:
                 lines.append(f'○ {i}. {title}')
 
         text = '\n'.join(lines)
-
-        # 发送到 QQ
         if self._bot._active_chat_id:
-            self._bot._send_qq_message_sync(
-                self._bot._active_chat_id,
-                text
-            )
-
+            self._bot._send_platform_message(self._bot._active_chat_id, text)
         return text
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# OptionSelector 适配器 - 用于 ask_option 工具
-# ─────────────────────────────────────────────────────────────────────────────
+class BotSelectorAdapter:
+    """Bot OptionSelector 适配器基类（编号输入模式）。"""
 
-class QQSelectorAdapter:
-    """QQ Bot OptionSelector 适配器，实现非交互式选择（编号输入模式）。"""
-
-    def __init__(self, bot: QQBotUser):
+    def __init__(self, bot: BotBaseUser):
         self._bot = bot
 
     def run_selector(self, selector: OptionSelector) -> str:
-        """运行选择器，返回结果字符串。
-
-        QQ 使用编号输入模式。
-        """
         if not selector.options:
             return '<Error: No options were provided>'
 
-        # 构建选项列表文本
         lines = [selector.question]
         for i, opt in enumerate(selector.options, 1):
             label = opt.get('label', f'Option{i}')
@@ -252,20 +198,12 @@ class QQSelectorAdapter:
             lines.append("\n(Enter a number, or type directly for custom input)")
 
         display_text = '\n'.join(lines)
-
-        # 发送到 QQ
         if self._bot._active_chat_id:
-            self._bot._send_qq_message_sync(
-                self._bot._active_chat_id,
-                display_text
-            )
+            self._bot._send_platform_message(self._bot._active_chat_id, display_text)
 
-        # 等待用户回复
         return self._wait_for_selection(selector)
 
     def _wait_for_selection(self, selector: OptionSelector) -> str:
-        """等待用户选择。"""
-        # 获取用户回复
         reply = self._wait_for_response()
         reply_stripped = reply.strip()
 
@@ -275,10 +213,11 @@ class QQSelectorAdapter:
         try:
             if selector.allow_multiple:
                 indices = [int(x.strip()) for x in re.split(r'[,，]', reply) if x.strip()]
-                selected = []
-                for idx in indices:
-                    if 1 <= idx <= len(selector.options):
-                        selected.append(selector.options[idx - 1].get('label', f'Option{idx}'))
+                selected = [
+                    selector.options[idx - 1].get('label', f'Option{idx}')
+                    for idx in indices
+                    if 1 <= idx <= len(selector.options)
+                ]
                 if not selected:
                     return reply_stripped
                 return ', '.join(selected)
@@ -286,31 +225,19 @@ class QQSelectorAdapter:
                 idx = int(reply_stripped)
                 if 1 <= idx <= len(selector.options):
                     return selector.options[idx - 1].get('label', f'Option{idx}')
-                else:
-                    return reply_stripped
+                return reply_stripped
         except ValueError:
-            # 非数字输入视为自定义
             return reply_stripped
 
     def _wait_for_response(self) -> str:
-        """等待用户回复。"""
-        import asyncio as aio
-
+        """等待用户回复。子类可覆盖以实现不同的队列读取逻辑。"""
         original_chat_id = self._bot._active_chat_id
-
-        # 轮询等待消息
-        max_wait = 600  # 最多等待 10 分钟
+        max_wait = 600
         waited = 0
         while waited < max_wait:
-            # 检查队列中是否有新消息
-            queue = self._bot._message_queues.get(original_chat_id)
-            if queue and not queue.empty():
-                try:
-                    msg = queue.get_nowait()
-                    return msg['content']
-                except aio.QueueEmpty:
-                    pass
+            msg = self._bot._get_platform_message(original_chat_id)
+            if msg is not None:
+                return msg
             time.sleep(0.1)
             waited += 0.1
-
         return '(TIMEOUT)'

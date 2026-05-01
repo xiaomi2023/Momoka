@@ -12,6 +12,7 @@ class Context:
         self._base_system: str = base_system
         self._injected_skills: dict[str, str] = {}
         self._preset_conv_count: int = 0  # 记录预设对话的数量
+        self._meta: list[dict] = []  # Bot 元数据存储
         self.history: list[dict] = [{'role': 'system', 'content': base_system}]
 
     # ── System Prompt ─────────────────────────────────────────────────────

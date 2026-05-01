@@ -3,13 +3,20 @@ user/selector.py —— 交互式选项选择器（纯业务逻辑）。
 
 只负责选项状态管理、导航逻辑计算、结果格式化。
 所有终端渲染和按键监听通过回调接口注入。
+
+与 CLI 平台的具体回调实现（SelectorCallbacks）解耦：
+- SelectorCallbacks 定义在 user/cli/selector.py（CLI 特有）
+- OptionSelector.run() 通过 TYPE_CHECKING 引用，避免运行时 import 依赖
+- 非 CLI 平台（Bot/Headless）不使用 SelectorCallbacks，直接调用 _fallback_numbered
 """
 
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
-from user.cli.selector import SelectorCallbacks
+if TYPE_CHECKING:
+    from user.cli.selector import SelectorCallbacks
 
 
 class OptionSelector:
@@ -21,7 +28,7 @@ class OptionSelector:
     - 空格键选中/取消（仅多选）
     - Enter 确认
     - ESC/q 进入自定义输入模式
-    - 降级为编号输入（非 TTY 环境）
+    - 降级为编号输入（非 TTY 环境 / Bot 平台）
     """
 
     def __init__(
@@ -36,30 +43,47 @@ class OptionSelector:
         self.cursor_idx = 0
         self.selected_indices: set[int] = set()
 
-    def run(self, callbacks: SelectorCallbacks, input_func=None) -> str:
+    def run(self, callbacks: 'SelectorCallbacks' = None, input_func=None) -> str:
         """运行交互式选择，返回结果字符串。
 
         Args:
-            callbacks: CLI 层提供的回调接口
+            callbacks: CLI 层提供的回调接口（CLI 模式必须），非 CLI 模式传 None
             input_func: 用于自定义输入模式（可选）
+
+        Bot/Headless 等非 CLI 平台应直接调用 fallback_numbered()。
         """
         if not self.options:
             return '<Error: No options were provided>'
 
-        # 检测是否支持 TTY
-        if not callbacks.is_tty():
-            return self._fallback_numbered(input_func)
+        # CLI 交互模式需要 callbacks
+        if callbacks is not None:
+            # 检测是否支持 TTY
+            if not callbacks.is_tty():
+                return self._fallback_numbered(input_func)
 
-        # 尝试交互式选择
-        try:
-            return self._interactive(callbacks, input_func)
-        except Exception:
-            # 任何异常降级为编号输入
-            return self._fallback_numbered(input_func)
+            # 尝试交互式选择
+            try:
+                return self._interactive(callbacks, input_func)
+            except Exception:
+                return self._fallback_numbered(input_func)
+
+        # 没有 callbacks → 降级为编号输入
+        return self._fallback_numbered(input_func)
+
+    def fallback_numbered(self, input_func=None) -> str:
+        """公有方法，供 Bot/Headless 平台直接调用编号输入模式。
+
+        Args:
+            input_func: 输入函数，默认为内置 input
+
+        Returns:
+            用户选择结果字符串
+        """
+        return self._fallback_numbered(input_func)
 
     # ── 交互式选择 ─────────────────────────────────────────────────────
 
-    def _interactive(self, callbacks: SelectorCallbacks, input_func=None):
+    def _interactive(self, callbacks: 'SelectorCallbacks', input_func=None):
         """交互式选择主循环。"""
         labels = self._get_labels()
 
@@ -92,7 +116,7 @@ class OptionSelector:
 
     # ── 降级：编号输入 ─────────────────────────────────────────────────
 
-    def _fallback_numbered(self, input_func) -> str:
+    def _fallback_numbered(self, input_func=None) -> str:
         """传统编号输入模式，始终可用。"""
         lines = [self.question]
         for i, opt in enumerate(self.options, 1):
@@ -154,7 +178,7 @@ class OptionSelector:
         else:
             self.selected_indices.add(self.cursor_idx)
 
-    def _confirm_selection(self, callbacks: SelectorCallbacks) -> str:
+    def _confirm_selection(self, callbacks: 'SelectorCallbacks') -> str:
         """确认当前选择并返回结果。"""
         if self.allow_multiple:
             if not self.selected_indices:
@@ -179,7 +203,7 @@ class OptionSelector:
         # 先停止 Live 渲染，再获取用户输入
         if callbacks is not None:
             callbacks.stop_live()
-        
+
         if input_func is None:
             input_func = input
 

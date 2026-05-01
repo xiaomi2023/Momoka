@@ -104,10 +104,6 @@ def glob(args: dict, ctx: ToolContext) -> ToolResult:
     log_label = f'Glob: {pattern}'
 
     try:
-        # 使用 pathlib 的 glob 功能
-        from pathlib import Path
-        import fnmatch
-
         search_path = Path(search_path)
         if not search_path.exists():
             return ToolResult(
@@ -115,13 +111,12 @@ def glob(args: dict, ctx: ToolContext) -> ToolResult:
                 log_msg=log_label,
             )
 
-        # 解析 glob 模式
-        # 支持 ** 递归匹配
+        # 解析 glob 模式 — Path.rglob 本身已支持递归（**）
         if '**' in pattern:
-            # 递归搜索
-            files = list(search_path.rglob(pattern.replace('**/', '').replace(f'**{os.sep}', '')))
+            # rglob 的 ** 需要 pattern 以 **/ 开头，否则直接使用 rglob
+            files = list(search_path.rglob(pattern.removeprefix('**/')))
         else:
-            # 仅当前目录
+            # glob 仅匹配当前目录
             files = list(search_path.glob(pattern))
 
         # 过滤出文件（不包括目录）
@@ -212,7 +207,7 @@ def _get_files(search_path: str, file_glob: str | None) -> list[str]:
     if file_glob:
         # 使用 glob 模式过滤
         if '**' in file_glob:
-            files = [str(f) for f in search_path.rglob(file_glob.replace('**/', '').replace(f'**{os.sep}', ''))]
+            files = [str(f) for f in search_path.rglob(file_glob.removeprefix('**/'))]
         else:
             files = [str(f) for f in search_path.glob(file_glob)]
     else:

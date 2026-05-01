@@ -62,8 +62,14 @@
 
 ## 🚀 快速开始
 
-### 加载
+### 部署
 
+#### 下载发行版本（推荐）
+在[这里](https://github.com/xiaomi2023/Momoka/releases)获取最新的Momoka版本。
+
+或
+
+#### 拉取仓库
 ```bash
 git clone https://github.com/xiaomi2023/Momoka
 ```
@@ -83,16 +89,21 @@ python main.py
 
 ### 配置
 
-运行后，输入以下命令以配置模型 API 的 Base Url 和 API Key：
-
+1、运行后，输入以下命令以配置模型 API 的 Base Url 和 API Key：
 ```bash
 /set base_url https://api.XXX.com
 /set api_key sk-***
 ```
 
-重新运行程序，输入 **/model** 以选择模型。  
-如果配置过程中出现异常，可以在config.json中配置相关字段。  
-发送测试信息确保一切就绪，然后就可开始与 Momoka 对话或利用 Momoka 完成各种任务。
+2、重新运行，输入 **/model** 以选择模型。
+
+3、（可选）输入命令：
+```bash
+/set work_dir C:\\Users\\...
+```
+配置Momoka工作的位置。  
+（如果配置过程中出现异常，可以在config.json中配置相关字段）  
+发送测试信息确保一切就绪，然后开始使用吧！
 
 ## 🧩 自定义与拓展
 - 配置 MCP 服务器：[MCP Server](https://xiaomi2023.github.io/Momoka/mcp_integration/)

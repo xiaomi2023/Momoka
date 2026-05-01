@@ -154,7 +154,7 @@ def main():
         set_current_interface(interface)
 
         if interface == 'lark':
-            from user.lark_bot import LarkBotUser
+            from user.bot.lark.lark_bot import LarkBotUser
             cfg = get_config()
             lark_cfg = cfg.get('lark', {})
             app_id = lark_cfg.get('app_id', '')
@@ -169,7 +169,7 @@ def main():
             log('interface | lark bot (WebSocket mode)')
 
         elif interface == 'discord':
-            from user.discord_bot import DiscordBotUser
+            from user.bot.discord.discord_bot import DiscordBotUser
             cfg = get_config()
             discord_cfg = cfg.get('discord', {})
             token = discord_cfg.get('token', '')
@@ -184,7 +184,7 @@ def main():
             log('interface | discord bot')
 
         elif interface == 'qq':
-            from user.qq_bot import QQBotUser
+            from user.bot.qq.qq_bot import QQBotUser
             cfg = get_config()
             qq_cfg = cfg.get('qq', {})
             app_id = qq_cfg.get('app_id', '')

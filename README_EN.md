@@ -22,7 +22,7 @@
 - 🔌 Fully integrated with MCP Server ecosystem
 - 🧩 Support for custom Momoka Servers
 - 🛠️ More secure system configuration monitoring mechanism
-- 🤖 Integrated with Discord and Lark
+- 🤖 Integrated with Discord, Lark (Feishu)
 
 ### 🎉 March 2026 Update
 <details>
@@ -62,7 +62,14 @@
 
 ## 🚀 Quick Start
 
-### Clone
+### Deployment
+
+#### Download Release (Recommended)
+Get the latest Momoka version [here](https://github.com/xiaomi2023/Momoka/releases).
+
+or
+
+#### Clone Repository
 
 ```bash
 git clone https://github.com/xiaomi2023/Momoka
@@ -90,9 +97,15 @@ After running, enter the following commands in the console to configure the Base
 /set api_key sk-***
 ```
 
-Rerun the program, then enter **/model** to select a model.
-If there are any exceptions during configuration, you can configure the related fields in config.json.
-Send a test message to ensure everything is ready, then you can chat with Momoka or ask Momoka to perform tasks.
+2. Rerun the program, then enter **/model** to select a model.
+
+3. (Optional) Enter the command:
+```bash
+/set work_dir C:\\Users\\...
+```
+to configure the working directory for Momoka.  
+(If there are any exceptions during configuration, you can configure the related fields in config.json.)  
+Send a test message to ensure everything is ready, then start using it!
 
 ## 🧩 Customization & Extensions
 - Configure MCP Servers: [MCP Server](https://xiaomi2023.github.io/Momoka/mcp_integration/)

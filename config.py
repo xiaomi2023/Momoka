@@ -114,8 +114,12 @@ def initialize_working_config():
     """
     with open(CONFIG_FILE, encoding='utf-8') as f:
         _static = json.load(f)
+    # work_dir 未指定或不存在时，以 main.py 运行地点为默认值
+    work_dir = _static.get('work_dir') or _HERE
+    if not os.path.exists(work_dir):
+        work_dir = _HERE
     _update_working_config(
-        where=_static['work_dir'],
+        where=work_dir,
         wait=10,
         wait_download=60,
         read_max_lines=1000,
