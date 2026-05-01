@@ -37,9 +37,9 @@ def get_config() -> dict:
     working = _get_working_config()
     # 运行时字段覆盖静态字段（如有同名）
     config.update(working)
-    # work_dir 未指定或不存在时，以 main.py 运行地点为默认值
+    # work_dir 未指定、为空字符串、为 null、或不存在时，以运行的目录为默认值
     if not config.get('work_dir') or not os.path.exists(config['work_dir']):
-        config['work_dir'] = _HERE  # _HERE = config.py 所在目录 = main.py 所在目录
+        config['work_dir'] = os.getcwd()  # 使用运行时的当前目录
     # 向后兼容：where 为空时回退到 work_dir
     if not config.get('where'):
         config['where'] = config['work_dir']
@@ -114,10 +114,10 @@ def initialize_working_config():
     """
     with open(CONFIG_FILE, encoding='utf-8') as f:
         _static = json.load(f)
-    # work_dir 未指定或不存在时，以 main.py 运行地点为默认值
-    work_dir = _static.get('work_dir') or _HERE
+    # work_dir 未指定、为空、为 null 或不存在时，以运行的目录为默认值
+    work_dir = _static.get('work_dir') or os.getcwd()
     if not os.path.exists(work_dir):
-        work_dir = _HERE
+        work_dir = os.getcwd()
     _update_working_config(
         where=work_dir,
         wait=10,

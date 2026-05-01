@@ -14,15 +14,15 @@ python main.py --config my_config.json
 
 ### Core Parameters
 
-| Parameter    | Type             | Required | Description                                                                 |
-|--------------|------------------|----------|-----------------------------------------------------------------------------|
-| `api_key`    | `string`         | Yes      | LLM API key for authentication                                              |
-| `base_url`   | `string`         | Yes      | API base URL endpoint (e.g., `https://api.openai.com/v1`)                   |
-| `model`      | `string`         | Yes      | Model name to use (e.g., `gpt-4o`, `claude-3-opus`, etc.)                   |
-| `work_dir`   | `string`         | No       | Default working directory path                                              |
-| `encoding`   | `string`         | No       | File encoding (default: `"utf-8"`)                                          |
-| `mute_log`   | `list[string]`   | No       | List of roles to mute in logs (e.g., `["SHELL", "BROWSER"]`)                |
-| `interface`  | `string`         | No       | Interface type: `"cli"`, `"lark"`, `"discord"`, `"qq"`, `"telegram"`, `"slack"`. Default: `"cli"` |
+| Parameter   | Type           | Required | Description                                                                                       |
+|-------------|----------------|----------|---------------------------------------------------------------------------------------------------|
+| `api_key`   | `string`       | Yes      | LLM API key for authentication                                                                    |
+| `base_url`  | `string`       | Yes      | API base URL endpoint (e.g., `https://api.openai.com/v1`)                                         |
+| `model`     | `string`       | Yes      | Model name to use (e.g., `gpt-4o`, `claude-3-opus`, etc.)                                         |
+| `work_dir`  | `string`       | No       | Default working directory path                                                                    |
+| `encoding`  | `string`       | No       | File encoding (default: `"utf-8"`)                                                                |
+| `mute_log`  | `list[string]` | No       | List of roles to mute in logs (e.g., `["SHELL", "BROWSER"]`)                                      |
+| `interface` | `string`       | No       | Interface type: `"cli"`, `"lark"`, `"discord"`, `"qq"`, `"telegram"`, `"slack"`. Default: `"cli"` |
 
 ### Example
 
