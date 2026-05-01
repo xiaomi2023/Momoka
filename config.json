@@ -5,7 +5,6 @@
   "model": "XXX",
   "encoding": "utf-8",
   "mute_log": [],
-  "memory": false,
   "interface": "cli",
 
   "lark": {
