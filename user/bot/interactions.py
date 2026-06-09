@@ -12,7 +12,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Callable
 
-from config import get_config, get_working_config, CONFIG_FILE
+from config import get_config, get_static_config, get_working_config, CONFIG_FILE
 from user.commands import SlashCommandCallbacks
 from user.interactions import AskUserCallbacks, TodoListCallbacks
 from user.selector import OptionSelector
@@ -41,6 +41,7 @@ class BotInteractionAdapterBase:
             send_message=self._send_message,
             get_session_data=self._get_session_data,
             get_config=self._get_config,
+            get_static_config=self._get_static_config,
             get_working_config=self._get_working_config,
             update_config=self._update_config,
             fetch_models=self._fetch_models,
@@ -60,6 +61,9 @@ class BotInteractionAdapterBase:
 
     def _get_config(self) -> dict:
         return get_config()
+
+    def _get_static_config(self) -> dict:
+        return get_static_config()
 
     def _get_working_config(self) -> dict:
         return get_working_config()

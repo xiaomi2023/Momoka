@@ -3,11 +3,9 @@
 Supports multiple interface modes:
 1. CLI mode (default): Interactive terminal interface
 2. Headless mode: Headless interface for pipe/file communication
-3. Telegram Bot: Telegram messaging interface
-4. Lark/Feishu Bot: Lark messaging interface
-5. Discord Bot: Discord messaging interface
-6. Slack Bot: Slack messaging interface
-7. QQ Bot: QQ messaging interface
+3. Lark/Feishu Bot: Lark messaging interface
+4. Discord Bot: Discord messaging interface
+5. QQ Bot: QQ messaging interface
 
 Usage:
     # CLI mode
@@ -22,17 +20,11 @@ Usage:
     # Headless mode (file I/O)
     python main.py --headless file --input input.txt --output output.txt
 
-    # Telegram Bot
-    python main.py --interface telegram
-
     # Lark/Feishu Bot
     python main.py --interface lark
 
     # Discord Bot
     python main.py --interface discord
-
-    # Slack Bot
-    python main.py --interface slack
 
     # QQ Bot
     python main.py --interface qq
@@ -42,6 +34,7 @@ import nest_asyncio
 nest_asyncio.apply()
 import argparse
 import logging
+import os
 import sys
 
 from config import get_config, initialize_working_config, set_config_file
@@ -59,23 +52,7 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description='Momoka - An personal AI assistant',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python main.py                           # CLI mode
-  python main.py --config my_config.json   # CLI mode with custom config
-  python main.py --interface cli           # CLI mode (explicit)
-  python main.py --interface telegram      # Telegram Bot
-  python main.py --interface lark          # Lark/Feishu Bot
-  python main.py --interface discord       # Discord Bot
-  python main.py --interface slack         # Slack Bot
-  python main.py --interface qq            # QQ Bot
-  python main.py --headless stdio          # Headless mode with stdio
-  python main.py --headless file \\
-           --input input.txt \\
-           --output output.txt             # File I/O mode
-        """
-    )
+        formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
         '--config',
@@ -85,9 +62,15 @@ Examples:
 
     parser.add_argument(
         '--interface',
-        choices=['cli', 'telegram', 'lark', 'discord', 'slack', 'qq'],
+        choices=['cli', 'lark', 'discord', 'qq'],
         default=None,
         help='Interface type to use (overrides config.json)'
+    )
+
+    parser.add_argument(
+        '--init',
+        action='store_true',
+        help='Initialize work_dir to the current directory'
     )
 
     parser.add_argument(
@@ -124,6 +107,23 @@ def main():
         except FileNotFoundError as e:
             print(f'Error: {e}')
             sys.exit(1)
+
+    # --init 参数：将 config.json 的 work_dir 设置为当前目录，然后继续启动
+    if args.init:
+        import json as _json
+        _base = os.path.dirname(os.path.abspath(__file__))
+        _cfg_debug = os.path.join(_base, 'config_debug.json')
+        _cfg_default = os.path.join(_base, 'config.json')
+        cfg_path = args.config if args.config else (
+            _cfg_debug if os.path.exists(_cfg_debug) else _cfg_default
+        )
+        cfg_path = os.path.abspath(cfg_path)
+        with open(cfg_path, 'r', encoding='utf-8') as _f:
+            _cfg = _json.load(_f)
+        _cfg['work_dir'] = os.getcwd()
+        with open(cfg_path, 'w', encoding='utf-8') as _f:
+            _json.dump(_cfg, _f, ensure_ascii=False, indent=2)
+        log(f'config | --init: work_dir 已设置为当前目录并继续启动: {os.getcwd()}')
 
     # 初始化运行时配置（确保每次启动从默认工作目录开始）
     initialize_working_config()

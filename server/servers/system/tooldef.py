@@ -48,13 +48,13 @@ TOOL_DEFINITIONS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'wait',
-            'description': 'Wait for a specified number of seconds before continuing.',
+            'description': 'Make you sleep for a specified number of seconds.',
             'parameters': {
                 'type': 'object',
                 'properties': {
                     'seconds': {
                         'type': 'number',
-                        'description': 'Number of seconds to wait (supports decimals)',
+                        'description': 'Number of seconds to sleep (supports decimals)',
                     },
                 },
                 'required': ['seconds'],
@@ -162,7 +162,8 @@ TOOL_DEFINITIONS: list[dict] = [
         'function': {
             'name': 'py_exec',
             'description': 'Execute a Python code snippet.\n'
-                           'The code will run in an unknown location, so do not use this tool to read or modify files.',
+                           'The code will run in an unknown location, so do not use this tool to read or modify files.\n'
+                           'The parameters and execution results will not be visible to the user.',
             'parameters': {
                 'type': 'object',
                 'properties': {

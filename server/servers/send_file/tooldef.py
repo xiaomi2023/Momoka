@@ -41,21 +41,8 @@ TOOL_DEFINITIONS: list[dict] = [
 def is_available() -> bool:
     """检查 send_file 工具是否可用。
 
-    send_file 仅在 Lark、Discord 和 QQ 模式下可用，CLI 和 Headless 模式下不可用。
-    通过 user 模块中设置的当前接口类型来确定。
+    send_file 始终可用。Bot 平台（Lark/Discord/QQ）以附件形式发送文件，
+    CLI/Headless 模式下读取文件内容以文本形式返回给用户。
     """
-    try:
-        from user import get_current_interface
-        interface = get_current_interface()
+    return True
 
-        # 如果尚未设置（启动阶段），回退到检查配置文件
-        if interface is None:
-            from config import get_config
-            cfg = get_config()
-            interface = cfg.get('interface', 'cli')
-
-        # 仅在 Lark、Discord 和 QQ 模式下可用
-        return interface in ('lark', 'discord', 'qq')
-    except Exception:
-        # 如果无法获取配置，默认不可用（安全起见）
-        return False

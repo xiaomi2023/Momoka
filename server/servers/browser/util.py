@@ -73,6 +73,9 @@ def _safe_evaluate(page, script, arg=None, *, retries: int = 4,
                    base_delay: float = 0.4) -> object:
     """带重试的 page.evaluate()，专门应对 rebrowser-playwright context 竞态。
 
+    同步版本，用于 Page 对象的同步 API 调用。
+    已被异步版本 _async_safe_evaluate 替代，保留以兼容旧代码。
+
     rebrowser 每次导航后会重新注入反检测脚本，旧 context 会短暂失效，
     直接调用 evaluate() 会抛出 "Cannot find context with specified id"。
     本函数以指数退避重试，彻底消除该竞态窗口。
@@ -98,13 +101,51 @@ def _safe_evaluate(page, script, arg=None, *, retries: int = 4,
         except Exception as e:
             err_str = str(e)
             if _CONTEXT_ERR not in err_str:
-                raise  # 非 context 错误，立即抛出
+                raise
             last_exc = e
             if attempt < retries:
                 log(f"browser | _safe_evaluate context error (attempt {attempt + 1}/{retries}), "
                     f"retry in {delay:.1f}s...")
                 time.sleep(delay)
-                delay = min(delay * 2, 3.0)  # 指数退避，上限 3 秒
+                delay = min(delay * 2, 3.0)
+    raise last_exc
+
+
+async def _async_safe_evaluate(page, script, arg=None, *, retries: int = 4,
+                                base_delay: float = 0.4) -> object:
+    """带重试的异步 page.evaluate()，专门应对 rebrowser-playwright context 竞态。
+
+    异步版本，用于 Page 对象的异步 API 调用。
+
+    Args:
+        page:       Playwright Page 对象（异步 API 版本）。
+        script:     传给 page.evaluate() 的 JS 字符串或函数。
+        arg:        可选参数，透传给 evaluate()。
+        retries:    最大重试次数（默认 4）。
+        base_delay: 首次重试等待秒数，后续翻倍（默认 0.4s）。
+    Returns:
+        evaluate() 的返回值。
+    Raises:
+        最后一次异常（非 context 错误会立即抛出）。
+    """
+    import asyncio
+    delay = base_delay
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            if arg is not None:
+                return await page.evaluate(script, arg)
+            return await page.evaluate(script)
+        except Exception as e:
+            err_str = str(e)
+            if _CONTEXT_ERR not in err_str:
+                raise
+            last_exc = e
+            if attempt < retries:
+                log(f"browser | _async_safe_evaluate context error (attempt {attempt + 1}/{retries}), "
+                    f"retry in {delay:.1f}s...")
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 3.0)
     raise last_exc
 
 

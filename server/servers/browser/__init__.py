@@ -36,6 +36,7 @@ from server.servers.browser.browser import (
     browser_scroll,
     browser_upload,
     browser_download,
+    browser_switch,
     browser_close,
 )
 

@@ -1,7 +1,9 @@
 """
 server/servers/send_file/__init__.py — Send File 模块自动注册。
 
-仅在飞书或 Discord 模式下可用。
+send_file 工具在所有平台模式下均可用：
+- Bot 平台（Lark/Discord/QQ）：以附件形式发送文件
+- CLI/Headless 模式：读取文件内容以文本形式返回给用户
 """
 
 from __future__ import annotations
@@ -20,3 +22,4 @@ register_server(ServerRegistration(
     },
     condition=is_available,
 ))
+

@@ -172,7 +172,8 @@ class HeadlessUser(BaseUser):
             'content': message
         })
 
-    def user_log(self, message: str, end: str = '\n', role: str = 'LOG') -> None:
+    def user_log(self, message: str, end: str = '\n', role: str = 'LOG',
+                 panel: bool = False) -> None:
         """输出日志消息（带角色标签）。"""
         from config import get_config
 
@@ -183,7 +184,8 @@ class HeadlessUser(BaseUser):
         self._write_json({
             'type': 'log',
             'role': role,
-            'content': message
+            'content': message,
+            'panel': panel,
         })
 
     def on_task_finish(self) -> None:

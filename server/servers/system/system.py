@@ -137,7 +137,7 @@ def _system_command_impl(command: str, inputs: str | list[str] | None = None) ->
 
     cfg = get_config()
     encoding = cfg['encoding']
-    max_lines: int = cfg.get('max_lines', 100)
+    max_lines: int = cfg.get('read_max_lines', 1000)
 
     stdout_str = b''.join(stdout_chunks).decode(encoding, errors='replace').rstrip('\r\n')
     stderr_str = b''.join(stderr_chunks).decode(encoding, errors='replace').rstrip('\r\n')
@@ -185,17 +185,20 @@ def system_command(args: dict, ctx: ToolContext) -> ToolResult:
     command = args.get('command', '')
     inputs = args.get('inputs')
 
-    input_log = f'\nShell Input: {command}'
+    input_log = f'Shell Input: {command}'
     if inputs is not None:
         input_log += f' | input={str(inputs).split()}'
     input_log += '\n'
 
     output = _system_command_impl(command, inputs=inputs)
-    output_log = f'Shell Output: {"\n" + output if output.strip() else "(NULL)"}\n'
+    output_log = f'{output if output.strip() else "(NULL)"}'
 
     return ToolResult(
         text=output or '(EMPTY OUTPUT)',
-        log_msg=[(input_log, 'SHELL'), (output_log, 'SHELL')],
+        log_msg=[
+            {'msg': input_log, 'role': 'SHELL'},
+            {'msg': output_log, 'role': 'SHELL', 'panel': True, 'panel_title': 'Shell'},
+        ],
     )
 
 
@@ -217,9 +220,25 @@ def write_file_tool(args: dict, ctx: ToolContext) -> ToolResult:
     content = args.get('content', '')
     encoding = args.get('encoding') or ctx.cfg.get('encoding', 'utf-8')
     try:
+        # ── 输入校验 ────────────────────────────────────────────────────
+        if not isinstance(file_path, str) or not file_path.strip():
+            return ToolResult(
+                text='<Error: file_path cannot be empty. Please provide a valid file path.>'
+            )
+        file_path = file_path.strip()
+        
         # 将相对路径转换为基于当前工作目录的绝对路径
         if not os.path.isabs(file_path):
             file_path = os.path.join(_get_cwd(), file_path)
+        
+        # 规范化路径（去除尾部斜杠、解析 . 和 ..）
+        file_path = os.path.normpath(file_path)
+        
+        # 防止写入目录：如果路径指向一个已存在的目录，报错
+        if os.path.isdir(file_path):
+            return ToolResult(
+                text=f'<Error: The path points to an existing directory, not a file: {file_path}>'
+            )
         
         # 自动创建父目录（如果不存在）
         parent_dir = os.path.dirname(file_path)
@@ -247,9 +266,25 @@ def replace_file(args: dict, ctx: ToolContext) -> ToolResult:
     new_text = args.get('new_text', '')
     encoding = args.get('encoding') or ctx.cfg.get('encoding', 'utf-8')
     try:
+        # ── 输入校验 ────────────────────────────────────────────────────
+        if not isinstance(file_path, str) or not file_path.strip():
+            return ToolResult(
+                text='<Error: file_path cannot be empty. Please provide a valid file path.>'
+            )
+        file_path = file_path.strip()
+        
         # 将相对路径转换为基于当前工作目录的绝对路径
         if not os.path.isabs(file_path):
             file_path = os.path.join(_get_cwd(), file_path)
+        
+        # 规范化路径（去除尾部斜杠、解析 . 和 ..）
+        file_path = os.path.normpath(file_path)
+        
+        # 防止写入目录：如果路径指向一个已存在的目录，报错
+        if os.path.isdir(file_path):
+            return ToolResult(
+                text=f'<Error: The path points to an existing directory, not a file: {file_path}>'
+            )
         
         content = find_file(file_path, encoding)
         if old_text not in content:
@@ -284,9 +319,19 @@ def read_file(args: dict, ctx: ToolContext) -> ToolResult:
     log_label = f'Read File: {file_path}' + (' [doc]' if mode == 'doc' else '')
 
     try:
+        # ── 输入校验 ────────────────────────────────────────────────────
+        if not isinstance(file_path, str) or not file_path.strip():
+            return ToolResult(
+                text='<Error: file_path cannot be empty. Please provide a valid file path.>'
+            )
+        file_path = file_path.strip()
+        
         # 将相对路径转换为基于当前工作目录的绝对路径
         if not os.path.isabs(file_path):
             file_path = os.path.join(_get_cwd(), file_path)
+        
+        # 规范化路径
+        file_path = os.path.normpath(file_path)
 
         # ── doc 模式（支持行号范围） ──────────────────────────────────
         if mode == 'doc':

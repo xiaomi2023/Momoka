@@ -74,13 +74,16 @@ class BaseUser(ABC):
         # 默认实现：只记录日志，子类可以覆盖此方法实现真正的文件发送
         self.user_log(f'[send_file] {file_path}' + (f' | {caption}' if caption else ''))
 
-    def user_log(self, message: str, end: str = '\n', role: str = 'LOG') -> None:
+    def user_log(self, message: str, end: str = '\n', role: str = 'LOG',
+                 panel: bool = False, panel_title: str | None = None) -> None:
         """向用户输出日志消息（带角色标签）。
         
         Args:
             message: 日志内容
             end: 行尾字符
             role: 角色标签，影响颜色 (BOT, ERROR, BROWSER, SHELL, etc.)
+            panel: 是否用 Rich Panel 包裹（CLI 交互式终端生效）
+            panel_title: Panel 标题，为 None 时使用 role
         """
         self.send_output(message, role=role)
 

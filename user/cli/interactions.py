@@ -6,7 +6,8 @@ user/cli/interactions.py —— CLI 层的用户交互适配器。
 
 from __future__ import annotations
 
-from rich.console import Console
+from rich.console import Console, Group
+from rich.panel import Panel
 from rich.text import Text
 
 from user.interactions import AskUserCallbacks, TodoListCallbacks
@@ -54,33 +55,36 @@ class CliInteractionAdapter:
         - pending/其他: 普通 cyan
         """
         if not tasks:
-            self._console.print('(EMPTY)')
+            self._console.print(Panel('(EMPTY)', width=self._console.width))
             return '(EMPTY)'
 
-        # 生成纯文本行（用于日志和终端渲染）
-        text_lines = []
+        rich_lines: list[Text] = []
+        text_lines: list[str] = []
+
         for i, task in enumerate(tasks, 1):
             status = task.get('status', 'pending')
             title = task.get('title', 'Unnamed task')
-            if status == 'done':
-                text_lines.append(f'✓ {i}. {title}')
-            elif status == 'in_progress':
-                text_lines.append(f'→ {i}. {title}')
-            else:
-                text_lines.append(f'○ {i}. {title}')
-
-        # 渲染到终端（带 Rich 样式）
-        self._console.print(Text('TODO:', style='bright_cyan'))
-        for i, task in enumerate(tasks, 1):
-            status = task.get('status', 'pending')
 
             if status == 'done':
-                line = Text(text_lines[i-1], style='dim')
+                marker = '✓'
+                style = 'dim'
             elif status == 'in_progress':
-                line = Text(text_lines[i-1], style='bright_cyan')
+                marker = '→'
+                style = 'bright_cyan'
             else:
-                line = Text(text_lines[i-1], style='cyan')
+                marker = '○'
+                style = 'cyan'
 
-            self._console.print(line)
+            rich_lines.append(Text(f' {marker} {i}. {title}', style=style))
+            text_lines.append(f' {marker} {i}. {title}')
+
+        panel = Panel(
+            Group(*rich_lines),
+            width=self._console.width,
+            title='TODO',
+            title_align='left',
+            border_style='dim',
+        )
+        self._console.print(panel)
 
         return 'TODO List:\n' + '\n'.join(text_lines)

@@ -26,7 +26,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     },
                     'path': {
                         'type': 'string',
-                        'description': 'Directory or file path to search in (defaults to current working directory)',
+                        'description': 'Directory or file path to search in. If not specified, searches from the current location (current working directory).',
                     },
                     'glob': {
                         'type': 'string',
@@ -64,7 +64,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     },
                     'path': {
                         'type': 'string',
-                        'description': 'Root directory to search in (defaults to current working directory)',
+                        'description': 'Root directory to search in. If not specified, searches from the current location (current working directory).',
                     },
                 },
                 'required': ['pattern'],

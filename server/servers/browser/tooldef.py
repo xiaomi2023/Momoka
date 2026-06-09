@@ -334,8 +334,20 @@ BROWSER_PAGE_TOOLS: list[dict] = [
         'type': 'function',
         'function': {
             'name': 'browse_scroll',
-            'description': 'Scroll the page or the specified element. Supports directions: up / down / left / right. \n'
-            "Unless necessary, prioritize adjusting char_start and char_end of browser_read to read more content.",
+            'description': (
+                'Scroll the page or the specified element. Supports directions: up / down / left / right.\n'
+                '\n'
+                'Use cases:\n'
+                '  - Trigger lazy loading\n'
+                '  - Expose off-screen elements\n'
+                '  - Navigate infinite-scroll pages (feeds, social media timelines).\n'
+                '  - Scroll horizontally for wide tables, dashboards, or carousels\n'
+                '  - Scroll an internal scrollable container\n'
+                '  - and so on. '
+                '\n\n'
+                'Note: browse_read reads the full page DOM regardless of scroll position. \n'
+                'If you want to read truncated content, modify the char_start and char_end parameters of browser_read instead of calling this tool.'
+            ),
             'parameters': {
                 'type': 'object',
                 'properties': {

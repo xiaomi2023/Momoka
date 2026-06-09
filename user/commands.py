@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-from config import get_config
+from config import get_config, get_static_config
 
 
 @dataclass
@@ -34,8 +34,11 @@ class SlashCommandCallbacks:
     get_config: Callable[[], dict]
     """获取当前静态配置 (config.json)"""
 
+    get_static_config: Callable[[], dict]
+    """仅获取静态配置 (config.json)，不含运行时配置"""
+
     get_working_config: Callable[[], dict]
-    """获取运行时配置 (working_config.json)"""
+    """获取运行时配置（模块内存变量）"""
 
     update_config: Callable[[str, object], bool]
     """更新配置项，返回 True 表示成功。
@@ -156,7 +159,7 @@ class SlashCommandHandler:
     def _handle_config(self) -> None:
         """处理 /config 命令。"""
         try:
-            cfg = self.callbacks.get_config()
+            cfg = self.callbacks.get_static_config()
             # 隐藏 API Key
             display = {k: ('***' if 'key' in k.lower() else v) for k, v in cfg.items()}
             msg = json.dumps(display, ensure_ascii=False, indent=2)
@@ -236,8 +239,8 @@ class SlashCommandHandler:
         
         key, raw_value = parts
         
-        # 验证 key 是否存在
-        cfg = self.callbacks.get_config()
+        # 验证 key 是否存在（仅检查静态配置中的 key）
+        cfg = self.callbacks.get_static_config()
         if key not in cfg:
             allowed = ', '.join(sorted(cfg.keys()))
             self.callbacks.send_message(

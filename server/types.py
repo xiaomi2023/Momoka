@@ -13,17 +13,22 @@ from typing import Any, Callable
 class ToolResult:
     """工具执行结果。
 
-    text:     返回给 model 的文字内容
-    success:  工具是否执行成功（默认 True）
-    log_msg:  需要输出给用户的日志；None 表示不 log
-              str                   → 单条，role 由 log_role 决定
-              list[tuple[str,str]]  → 多条，每项为 (msg, role)
-    log_role: 单条 log 时的 role，默认 'TOOL'
+    text:       返回给 model 的文字内容
+    success:    工具是否执行成功（默认 True）
+    log_msg:    需要输出给用户的日志；None 表示不 log
+                str                        → 单条，role 由 log_role 决定
+                list[dict]                 → 多条，每项为 {msg, role, panel?, panel_title?}
+    log_role:   单条 log 时的 role，默认 'TOOL'
+    panel:      可选。若不为空，CLI 层用 Rich Panel 包裹 log_msg。
+                仅对单条 log_msg 生效。
+    panel_title: Panel 标题，为 None 时使用 log_role。
     """
     text: str
     success: bool = True
-    log_msg: str | list[tuple[str, str]] | None = None
+    log_msg: str | list[dict] | None = None
     log_role: str = 'TOOL'
+    panel: bool = False
+    panel_title: str | None = None
 
 
 @dataclass

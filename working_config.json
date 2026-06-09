@@ -1,7 +1,0 @@
-{
-  "where": "C:\\Users\\...",
-  "wait": 10,
-  "wait_download": 60,
-  "read_max_lines": 1000,
-  "read_max_size_kb": 100
-}

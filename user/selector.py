@@ -200,8 +200,9 @@ class OptionSelector:
 
     def _custom_input(self, input_func=None, callbacks=None) -> str:
         """进入自定义输入模式。"""
-        # 先停止 Live 渲染，再获取用户输入
+        # 先清除 Live 内容（避免 transient 保留选项列表），再停止
         if callbacks is not None:
+            callbacks.clear_live()
             callbacks.stop_live()
 
         if input_func is None:

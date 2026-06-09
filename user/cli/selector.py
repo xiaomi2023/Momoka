@@ -2,7 +2,7 @@
 user/cli/selector.py —— 选项选择器的 CLI 终端适配器。
 
 将 OptionSelector 的回调接口桥接到 Rich 终端渲染和跨平台按键监听。
-使用 Rich Live 实现优雅的终端刷新，无需手动处理 ANSI 转义码。
+使用 Rich Live 实现优雅的终端刷新。
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ class SelectorCallbacks:
     """阻塞获取按键，返回按键字符/转义序列（如 '\\x1b[A' 表示上箭头）"""
 
     is_tty: Callable[[], bool]
-    """检测是否为 TTY 环境"""
+    """检测是否为 TTY 环境（CLI 模式下始终为 True）"""
 
     start_live: Callable[[], None]
     """启动 Live 渲染"""
@@ -34,6 +34,9 @@ class SelectorCallbacks:
 
     stop_live: Callable[[], None]
     """停止 Live 渲染"""
+
+    clear_live: Callable[[], None]
+    """清除 Live 内容（临时将内容置空再刷新），然后停止时不保留乱码"""
 
 
 class CliSelectorAdapter:
@@ -47,10 +50,11 @@ class CliSelectorAdapter:
         """构建回调接口实例。"""
         return SelectorCallbacks(
             get_key=self._get_key,
-            is_tty=self._is_tty,
+            is_tty=lambda: True,  # CLI 模式始终是 TTY
             start_live=self._start_live,
             update_render=self._update_render,
             stop_live=self._stop_live,
+            clear_live=self._clear_live,
         )
 
     # ── 回调实现 ───────────────────────────────────────────────────────
@@ -66,15 +70,12 @@ class CliSelectorAdapter:
         """构建 Rich 可渲染对象。"""
         items: list[Text] = []
 
-        # 标题
         items.append(Text(question, style="bold cyan"))
 
-        # 选项
         for i, label in enumerate(labels):
             is_cursor = i == cursor_idx
             is_selected = i in selected_indices
 
-            # 构建标记
             if allow_multiple:
                 marker = '[✓] ' if is_selected else '[ ] '
             else:
@@ -85,7 +86,6 @@ class CliSelectorAdapter:
             else:
                 marker = '  ' + marker
 
-            # 应用样式
             if is_cursor:
                 items.append(Text(f"{marker}{label}", style="bold cyan"))
             elif is_selected:
@@ -93,7 +93,6 @@ class CliSelectorAdapter:
             else:
                 items.append(f"{marker}{label}")
 
-        # 提示（放在最下面）
         if allow_multiple:
             items.append(Text("(↑↓ navigate, Space select, Enter confirm, ESC/q custom)", style="dim"))
         else:
@@ -108,7 +107,7 @@ class CliSelectorAdapter:
                 Text(""),
                 console=self._console,
                 refresh_per_second=10,
-                transient=True,  # 停止后自动收回
+                transient=True,
             )
             self._live.start()
 
@@ -124,6 +123,12 @@ class CliSelectorAdapter:
         if self._live is not None:
             renderable = self._build_renderable(question, labels, cursor_idx, selected_indices, allow_multiple)
             self._live.update(renderable, refresh=True)
+
+    def _clear_live(self):
+        """清除 Live 内容，停止后不保留选项列表的残留。"""
+        if self._live is not None:
+            # 将内容清为空白，刷新后再停，transient 只保留空白行
+            self._live.update(Text(""), refresh=True)
 
     def _stop_live(self):
         """停止 Live 渲染。"""
@@ -147,16 +152,14 @@ class CliSelectorAdapter:
 
         key = msvcrt.getch()
 
-        # 特殊键前缀
         if key in (b'\x00', b'\xe0'):
             key2 = msvcrt.getch()
             if key2 == b'H':
-                return '\x1b[A'  # Up
+                return '\x1b[A'
             elif key2 == b'P':
-                return '\x1b[B'  # Down
+                return '\x1b[B'
             return ''
 
-        # 普通键
         if key == b'\r':
             return '\r'
         elif key == b' ':
@@ -179,15 +182,15 @@ class CliSelectorAdapter:
             tty.setraw(fd)
             ch = sys.stdin.read(1)
 
-            if ch == '\x1b':  # ESC 序列
+            if ch == '\x1b':
                 ch2 = sys.stdin.read(1)
                 if ch2 == '[':
                     ch3 = sys.stdin.read(1)
                     if ch3 == 'A':
-                        return '\x1b[A'  # Up
+                        return '\x1b[A'
                     elif ch3 == 'B':
-                        return '\x1b[B'  # Down
-                return '\x1b'  # 裸 ESC
+                        return '\x1b[B'
+                return '\x1b'
             elif ch in ('\r', '\n'):
                 return '\r'
             elif ch == ' ':
@@ -198,6 +201,3 @@ class CliSelectorAdapter:
                 return ch
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
-    def _is_tty(self) -> bool:
-        return sys.stdout.isatty() and sys.stdin.isatty()

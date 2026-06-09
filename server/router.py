@@ -59,10 +59,15 @@ def _emit_logs(result: ToolResult, user) -> None:
     if user is None or result.log_msg is None:
         return
     if isinstance(result.log_msg, list):
-        for msg, role in result.log_msg:
-            user.user_log(msg, role=role)
+        for item in result.log_msg:
+            msg = item['msg']
+            role = item.get('role', result.log_role)
+            panel = item.get('panel', False)
+            panel_title = item.get('panel_title')
+            user.user_log(msg, role=role, panel=panel, panel_title=panel_title)
     else:
-        user.user_log(result.log_msg, role=result.log_role)
+        user.user_log(result.log_msg, role=result.log_role,
+                      panel=result.panel, panel_title=result.panel_title)
 
 
 # ── 主入口 ────────────────────────────────────────────────────────────────
